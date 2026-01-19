@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* De La Salle Green Base */
+  --primary: 152 100% 20%;      /* #006837 */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 152 30% 96%;
+  --secondary-foreground: 152 100% 20%;
+  
+  --accent: 152 40% 90%;
+  --accent-foreground: 152 100% 20%;
+  
+  --background: 210 20% 99%;
+  --foreground: 222 47% 11%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 152 100% 20%;
+  
+  --radius: 0.75rem;
+  
+  /* Status Colors */
+  --status-present: 142 76% 36%;
+  --status-late: 38 92% 50%;
+  --status-absent: 0 84% 60%;
+  --status-excused: 217 91% 60%;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased font-sans selection:bg-primary/20;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald-600;
+  }
+}

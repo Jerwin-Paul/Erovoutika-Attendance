@@ -1,0 +1,167 @@
+import { db } from "./db";
+import { 
+  users, subjects, enrollments, attendance, qrCodes,
+  type User, type InsertUser, 
+  type Subject, type InsertSubject,
+  type Attendance, type InsertAttendance,
+  type Enrollment, type InsertEnrollment,
+  type QrCode, type InsertQrCode
+} from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
+
+export interface IStorage {
+  // Users
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  getUsersByRole(role?: "student" | "teacher" | "superadmin"): Promise<User[]>;
+  updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<void>;
+
+  // Subjects
+  createSubject(subject: InsertSubject): Promise<Subject>;
+  getSubject(id: number): Promise<Subject | undefined>;
+  getAllSubjects(): Promise<Subject[]>;
+  getSubjectsByTeacher(teacherId: number): Promise<Subject[]>;
+  getSubjectsByStudent(studentId: number): Promise<Subject[]>;
+  
+  // Enrollments
+  enrollStudent(studentId: number, subjectId: number): Promise<Enrollment>;
+  getSubjectStudents(subjectId: number): Promise<User[]>;
+
+  // Attendance
+  markAttendance(record: InsertAttendance): Promise<Attendance>;
+  getAttendance(studentId?: number, subjectId?: number, date?: string): Promise<(Attendance & { studentName: string, subjectName: string })[]>;
+
+  // QR Codes
+  createQrCode(qr: InsertQrCode): Promise<QrCode>;
+  getActiveQrCode(subjectId: number): Promise<QrCode | undefined>;
+}
+
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getUsersByRole(role?: "student" | "teacher" | "superadmin"): Promise<User[]> {
+    if (role) {
+      return db.select().from(users).where(eq(users.role, role));
+    }
+    return db.select().from(users);
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const [updated] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return updated;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async createSubject(subject: InsertSubject): Promise<Subject> {
+    const [newSubject] = await db.insert(subjects).values(subject).returning();
+    return newSubject;
+  }
+
+  async getSubject(id: number): Promise<Subject | undefined> {
+    const [subject] = await db.select().from(subjects).where(eq(subjects.id, id));
+    return subject;
+  }
+
+  async getAllSubjects(): Promise<Subject[]> {
+    return db.select().from(subjects);
+  }
+
+  async getSubjectsByTeacher(teacherId: number): Promise<Subject[]> {
+    return db.select().from(subjects).where(eq(subjects.teacherId, teacherId));
+  }
+
+  async getSubjectsByStudent(studentId: number): Promise<Subject[]> {
+    const result = await db.select({
+      subject: subjects
+    })
+    .from(enrollments)
+    .innerJoin(subjects, eq(enrollments.subjectId, subjects.id))
+    .where(eq(enrollments.studentId, studentId));
+    
+    return result.map(r => r.subject);
+  }
+
+  async enrollStudent(studentId: number, subjectId: number): Promise<Enrollment> {
+    const [enrollment] = await db.insert(enrollments).values({ studentId, subjectId }).returning();
+    return enrollment;
+  }
+
+  async getSubjectStudents(subjectId: number): Promise<User[]> {
+    const result = await db.select({
+      user: users
+    })
+    .from(enrollments)
+    .innerJoin(users, eq(enrollments.studentId, users.id))
+    .where(eq(enrollments.subjectId, subjectId));
+    
+    return result.map(r => r.user);
+  }
+
+  async markAttendance(record: InsertAttendance): Promise<Attendance> {
+    const [att] = await db.insert(attendance).values(record).returning();
+    return att;
+  }
+
+  async getAttendance(studentId?: number, subjectId?: number, date?: string): Promise<(Attendance & { studentName: string, subjectName: string })[]> {
+    let query = db.select({
+      id: attendance.id,
+      studentId: attendance.studentId,
+      subjectId: attendance.subjectId,
+      date: attendance.date,
+      status: attendance.status,
+      timeIn: attendance.timeIn,
+      remarks: attendance.remarks,
+      studentName: users.fullName,
+      subjectName: subjects.name
+    })
+    .from(attendance)
+    .innerJoin(users, eq(attendance.studentId, users.id))
+    .innerJoin(subjects, eq(attendance.subjectId, subjects.id));
+
+    const conditions = [];
+    if (studentId) conditions.push(eq(attendance.studentId, studentId));
+    if (subjectId) conditions.push(eq(attendance.subjectId, subjectId));
+    if (date) conditions.push(eq(attendance.date, date));
+
+    if (conditions.length > 0) {
+      // @ts-ignore
+      return query.where(and(...conditions)).orderBy(desc(attendance.date));
+    }
+    
+    return query.orderBy(desc(attendance.date));
+  }
+
+  async createQrCode(qr: InsertQrCode): Promise<QrCode> {
+    const [code] = await db.insert(qrCodes).values(qr).returning();
+    return code;
+  }
+
+  async getActiveQrCode(subjectId: number): Promise<QrCode | undefined> {
+    const [qr] = await db.select()
+      .from(qrCodes)
+      .where(and(eq(qrCodes.subjectId, subjectId), eq(qrCodes.active, true)))
+      .orderBy(desc(qrCodes.createdAt))
+      .limit(1);
+    return qr;
+  }
+}
+
+export const storage = new DatabaseStorage();

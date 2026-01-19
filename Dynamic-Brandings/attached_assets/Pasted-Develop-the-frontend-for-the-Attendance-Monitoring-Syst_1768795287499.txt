@@ -1,0 +1,30 @@
+Develop the frontend for the Attendance Monitoring System for De La Salle, named 'AttendED', adhering to the project plan and UI design drafts. The frontend must be user-friendly and a web application, available for all devices and browsers.123
+
+Key Requirements & Design:
+Tech Stack: Use HTML and CSS for the frontend development.4
+User Interface (UI): Implement the UI based on the provided drafts.5
+Branding: Incorporate 'De La Salle University', 'DLSL', and 'AttendED' branding elements, including the school's theme (De La Salle Green and White, as implied by the context)
+
+Login/Sign-in Page: Design a sign-in interface (as shown in Drafts on page 2 and 3) that includes
+Fields for Username and Password.9
+Options for 'Remember me'
+Role selection/indicator for Teacher and Admin (the general requirement is for Superadmin and such)
+
+Core Feature Implementation:
+Navigation: Implement the navigation or dashboard structure for the user, including links for Dashboard, Attendance Sheet (or Attendance), Students, and Logout.16
+Student Account Features:
+Implement the interface for students to access their attendance record (Present, Late, Absent, Excused, etc.)
+Ensure the attendance record is grouped by their subjects
+
+Teacher Account Features:
+- Design the interface to display the List of Subjects / Classes and the Students List.
+- Develop the Student Attendance Record view, resembling the draft on page 4. This view must include:
+1. Student Name, Time-in, and status (Present, Late, Absent, Excused)
+A mechanism to display the summarized attendance data: total Students, Present, Late, Absent, and Excused counts
+2. Buttons for the teacher to Start and End the QR Code generator (as per system rules)
+3. The frontend should include an 'Edit' option on the attendance view.
+
+Super Admin Account Features:
+- Include UI elements for Roles Assigner and CRUD features
+- Constraint/Constraint to Keep in Mind:
+1. The backend will be SupaBase, and the database is PostgreSQL. The frontend must be ready to integrate with this backend structure.
