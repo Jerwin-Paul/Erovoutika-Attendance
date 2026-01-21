@@ -35,6 +35,7 @@ export interface IStorage {
   // Attendance
   markAttendance(record: InsertAttendance): Promise<Attendance>;
   getAttendance(studentId?: number, subjectId?: number, date?: string): Promise<(Attendance & { studentName: string, subjectName: string })[]>;
+  getAttendanceByTeacher(teacherId: number): Promise<(Attendance & { studentName: string, subjectName: string })[]>;
 
   // QR Codes
   createQrCode(qr: InsertQrCode): Promise<QrCode>;
@@ -181,6 +182,25 @@ export class DatabaseStorage implements IStorage {
     }
     
     return query.orderBy(desc(attendance.date));
+  }
+
+  async getAttendanceByTeacher(teacherId: number): Promise<(Attendance & { studentName: string, subjectName: string })[]> {
+    return db.select({
+      id: attendance.id,
+      studentId: attendance.studentId,
+      subjectId: attendance.subjectId,
+      date: attendance.date,
+      status: attendance.status,
+      timeIn: attendance.timeIn,
+      remarks: attendance.remarks,
+      studentName: users.fullName,
+      subjectName: subjects.name
+    })
+    .from(attendance)
+    .innerJoin(users, eq(attendance.studentId, users.id))
+    .innerJoin(subjects, eq(attendance.subjectId, subjects.id))
+    .where(eq(subjects.teacherId, teacherId))
+    .orderBy(desc(attendance.date));
   }
 
   async createQrCode(qr: InsertQrCode): Promise<QrCode> {

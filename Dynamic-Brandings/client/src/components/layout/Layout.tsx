@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useSystemSettings } from "@/hooks/use-system-settings";
@@ -11,7 +11,10 @@ import {
   Settings, 
   Menu,
   X,
-  GraduationCap
+  GraduationCap,
+  ChevronDown,
+  History,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,8 +26,24 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { settings } = useSystemSettings();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+
+  // Auto-expand attendance menu when on attendance pages
+  useEffect(() => {
+    if (location.startsWith('/attendance')) {
+      setExpandedMenus(prev => prev.includes('attendance') ? prev : [...prev, 'attendance']);
+    }
+  }, [location]);
+
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(menuId) 
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
 
   if (!user) return null;
 
@@ -45,6 +64,87 @@ export function Layout({ children }: LayoutProps) {
     );
   };
 
+  // Navigation item with expandable sub-items
+  const NavItemWithSub = ({ 
+    menuId, 
+    icon: Icon, 
+    label, 
+    defaultHref,
+    subItems 
+  }: { 
+    menuId: string; 
+    icon: any; 
+    label: string; 
+    defaultHref: string;
+    subItems: { href: string; icon: any; label: string }[] 
+  }) => {
+    const isExpanded = expandedMenus.includes(menuId);
+    const isAnySubActive = subItems.some(item => location === item.href);
+    
+    const handleClick = () => {
+      // Always expand the menu
+      if (!expandedMenus.includes(menuId)) {
+        setExpandedMenus(prev => [...prev, menuId]);
+      }
+      // Navigate to the default page
+      navigate(defaultHref);
+    };
+
+    const handleChevronClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      toggleMenu(menuId);
+    };
+    
+    return (
+      <div>
+        <div 
+          className={cn(
+            "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+            isAnySubActive 
+              ? "bg-primary/10 text-primary" 
+              : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+          )}
+          onClick={handleClick}
+        >
+          <Icon className="w-5 h-5" />
+          <span className="flex-1">{label}</span>
+          <ChevronDown 
+            className={cn(
+              "w-4 h-4 transition-transform duration-200 hover:scale-110",
+              isExpanded && "rotate-180"
+            )}
+            onClick={handleChevronClick}
+          />
+        </div>
+        
+        {/* Sub Items */}
+        <div className={cn(
+          "overflow-hidden transition-all duration-200",
+          isExpanded ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+        )}>
+          <div className="ml-4 mt-1 space-y-1 border-l-2 border-border pl-4">
+            {subItems.map((item) => {
+              const isActive = location === item.href;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <div className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                    isActive 
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                      : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+                  )}>
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const roleLinks = {
     student: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -54,7 +154,18 @@ export function Layout({ children }: LayoutProps) {
     teacher: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/subjects", icon: BookOpen, label: "My Classes" },
-      { href: "/reports", icon: CalendarCheck, label: "Reports" },
+      { 
+        type: "expandable",
+        menuId: "attendance",
+        icon: CalendarCheck, 
+        label: "Attendance",
+        defaultHref: "/attendance",
+        subItems: [
+          { href: "/attendance", icon: CalendarCheck, label: "Take Attendance" },
+          { href: "/attendance/history", icon: History, label: "Attendance History" },
+        ]
+      },
+      { href: "/reports", icon: FileText, label: "Reports" },
     ],
     superadmin: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -97,8 +208,19 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         <div className="flex-1 px-4 py-6 space-y-1">
-          {links.map((link) => (
-            <NavItem key={link.href} {...link} />
+          {links.map((link: any) => (
+            link.type === "expandable" ? (
+              <NavItemWithSub 
+                key={link.menuId} 
+                menuId={link.menuId}
+                icon={link.icon}
+                label={link.label}
+                defaultHref={link.defaultHref}
+                subItems={link.subItems}
+              />
+            ) : (
+              <NavItem key={link.href} {...link} />
+            )
           ))}
         </div>
 

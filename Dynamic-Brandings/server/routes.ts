@@ -179,6 +179,22 @@ export async function registerRoutes(
     res.status(201).json(record);
   });
 
+  // Get attendance records for teacher's subjects
+  app.get('/api/attendance/teacher', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as any;
+    if (user.role !== "teacher" && user.role !== "superadmin") {
+      return res.status(403).json({ message: "Only teachers can access this endpoint" });
+    }
+    try {
+      const records = await storage.getAttendanceByTeacher(user.id);
+      res.json(records);
+    } catch (error) {
+      console.error('Error fetching teacher attendance:', error);
+      res.status(500).json({ error: 'Failed to fetch attendance records' });
+    }
+  });
+
   // === QR Code ===
   app.post(api.qr.generate.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
