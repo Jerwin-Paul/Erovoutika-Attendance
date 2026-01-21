@@ -115,6 +115,16 @@ export async function registerRoutes(
     res.status(201).json(subject);
   });
 
+  app.get('/api/teacher/stats', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as any;
+    console.log('Teacher stats request for user:', user.id, user.role);
+    if (user.role !== 'teacher') return res.sendStatus(403);
+    const totalStudents = await storage.getTotalEnrolledStudentsByTeacher(user.id);
+    console.log('Total students found:', totalStudents);
+    res.json({ totalStudents });
+  });
+
   app.post(api.subjects.enroll.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const subjectId = parseInt(req.params.id);
@@ -132,9 +142,16 @@ export async function registerRoutes(
 
   app.delete('/api/subjects/:id', async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const subjectId = parseInt(req.params.id);
-    await storage.deleteSubject(subjectId);
-    res.sendStatus(204);
+    try {
+      const subjectId = parseInt(req.params.id);
+      console.log('Deleting subject:', subjectId);
+      await storage.deleteSubject(subjectId);
+      console.log('Subject deleted successfully:', subjectId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error('Error deleting subject:', error);
+      res.status(500).json({ error: 'Failed to delete subject' });
+    }
   });
 
   // === Attendance ===

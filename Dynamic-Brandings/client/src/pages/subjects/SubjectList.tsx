@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSubjects, useCreateSubject, useSubjectStudents } from "@/hooks/use-subjects";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   BookOpen, 
@@ -84,6 +85,23 @@ export default function SubjectList() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [editScheduleSubject, setEditScheduleSubject] = useState<Subject | null>(null);
   const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+  const [location, setLocation] = useLocation();
+
+  // Handle URL parameter to auto-open student dialog
+  useEffect(() => {
+    if (subjects && subjects.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const viewStudentsId = params.get('viewStudents');
+      if (viewStudentsId) {
+        const subject = subjects.find(s => s.id === parseInt(viewStudentsId));
+        if (subject) {
+          setSelectedSubject(subject);
+          // Clear the URL parameter
+          setLocation('/subjects', { replace: true });
+        }
+      }
+    }
+  }, [subjects, setLocation]);
 
   const filteredSubjects = subjects?.filter(s => 
     s.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -578,6 +596,7 @@ function DeleteSubjectDialog({ subject, open, onClose }: { subject: Subject | nu
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/subjects/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!res.ok) throw new Error("Failed to delete subject");
     },
@@ -607,7 +626,10 @@ function DeleteSubjectDialog({ subject, open, onClose }: { subject: Subject | nu
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={() => deleteSubject(subject.id)}
+            onClick={(e) => {
+              e.preventDefault();
+              deleteSubject(subject.id);
+            }}
             disabled={isPending}
           >
             {isPending ? "Deleting..." : "Delete Subject"}

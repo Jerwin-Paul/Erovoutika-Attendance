@@ -30,6 +30,7 @@ export interface IStorage {
   // Enrollments
   enrollStudent(studentId: number, subjectId: number): Promise<Enrollment>;
   getSubjectStudents(subjectId: number): Promise<User[]>;
+  getTotalEnrolledStudentsByTeacher(teacherId: number): Promise<number>;
 
   // Attendance
   markAttendance(record: InsertAttendance): Promise<Attendance>;
@@ -128,6 +129,24 @@ export class DatabaseStorage implements IStorage {
     .where(eq(enrollments.subjectId, subjectId));
     
     return result.map(r => r.user);
+  }
+
+  async getTotalEnrolledStudentsByTeacher(teacherId: number): Promise<number> {
+    // Get all subjects taught by this teacher
+    const teacherSubjects = await db.select().from(subjects).where(eq(subjects.teacherId, teacherId));
+    console.log('Teacher subjects:', teacherSubjects.length, teacherSubjects.map(s => s.id));
+    
+    // Get unique students enrolled across all those subjects
+    const subjectIds = teacherSubjects.map(s => s.id);
+    if (subjectIds.length === 0) return 0;
+    
+    const result = await db.selectDistinct({ studentId: enrollments.studentId })
+      .from(enrollments)
+      .innerJoin(subjects, eq(enrollments.subjectId, subjects.id))
+      .where(eq(subjects.teacherId, teacherId));
+    
+    console.log('Enrolled students result:', result);
+    return result.length;
   }
 
   async markAttendance(record: InsertAttendance): Promise<Attendance> {
