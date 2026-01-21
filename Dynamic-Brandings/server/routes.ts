@@ -164,6 +164,46 @@ export async function registerRoutes(
     res.status(201).json(qr);
   });
 
+  // === Schedules ===
+  app.get(api.schedules.listByTeacher.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as any;
+    if (user.role !== "teacher") {
+      return res.status(403).json({ message: "Only teachers can access this endpoint" });
+    }
+    const schedules = await storage.getSchedulesByTeacher(user.id);
+    res.json(schedules);
+  });
+
+  app.get(api.schedules.listBySubject.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const subjectId = parseInt(req.params.id);
+    const schedules = await storage.getSchedulesBySubject(subjectId);
+    res.json(schedules);
+  });
+
+  app.post(api.schedules.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const scheduleData = api.schedules.create.input.parse(req.body);
+      const schedule = await storage.createSchedule(scheduleData);
+      res.status(201).json(schedule);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json(err.errors);
+      } else {
+        throw err;
+      }
+    }
+  });
+
+  app.delete(api.schedules.delete.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const id = parseInt(req.params.id);
+    await storage.deleteSchedule(id);
+    res.sendStatus(204);
+  });
+
   // Seed Data
   await seedDatabase();
 
@@ -205,6 +245,31 @@ async function seedDatabase() {
       description: "Introduction to Software Engineering"
     });
 
+    // Create Schedules for the subject
+    await storage.createSchedule({
+      subjectId: subject.id,
+      dayOfWeek: "Monday",
+      startTime: "09:00",
+      endTime: "10:30",
+      room: "Q3212"
+    });
+
+    await storage.createSchedule({
+      subjectId: subject.id,
+      dayOfWeek: "Wednesday",
+      startTime: "09:00",
+      endTime: "10:30",
+      room: "Q3212"
+    });
+
+    await storage.createSchedule({
+      subjectId: subject.id,
+      dayOfWeek: "Friday",
+      startTime: "09:00",
+      endTime: "10:30",
+      room: "Q3212"
+    });
+
     // Enroll Student
     await storage.enrollStudent(student.id, subject.id);
 
@@ -216,5 +281,40 @@ async function seedDatabase() {
       date: new Date().toISOString().split('T')[0],
       remarks: "On time"
     });
+  }
+
+  // Seed schedules for existing subjects if they don't have any
+  await seedSchedulesForExistingSubjects();
+}
+
+async function seedSchedulesForExistingSubjects() {
+  // Get all subjects
+  const allSubjects = await storage.getAllSubjects();
+  
+  for (const subject of allSubjects) {
+    // Check if subject already has schedules
+    const existingSchedules = await storage.getSchedulesBySubject(subject.id);
+    
+    if (existingSchedules.length === 0) {
+      // Add sample schedules based on subject code pattern
+      if (subject.code === "SE101") {
+        // Software Engineering: Mon, Wed, Fri 9:00-10:30 AM
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Monday", startTime: "09:00", endTime: "10:30", room: "Q3212" });
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Wednesday", startTime: "09:00", endTime: "10:30", room: "Q3212" });
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Friday", startTime: "09:00", endTime: "10:30", room: "Q3212" });
+      } else if (subject.id === 2) {
+        // Second subject: Mon, Tue 11:00-12:30 PM
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Monday", startTime: "11:00", endTime: "12:30", room: "Q3212" });
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Tuesday", startTime: "11:00", endTime: "12:30", room: "Q3212" });
+      } else if (subject.id === 3) {
+        // Third subject: Wed 1:00-2:30 PM, Fri 11:00-12:30 PM
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Wednesday", startTime: "13:00", endTime: "14:30", room: "Q3212" });
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Friday", startTime: "11:00", endTime: "12:30", room: "Q5212" });
+      } else {
+        // Default schedule for any other subject: TTh 2:00-3:30 PM
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Tuesday", startTime: "14:00", endTime: "15:30", room: "Q4212" });
+        await storage.createSchedule({ subjectId: subject.id, dayOfWeek: "Thursday", startTime: "14:00", endTime: "15:30", room: "Q4212" });
+      }
+    }
   }
 }

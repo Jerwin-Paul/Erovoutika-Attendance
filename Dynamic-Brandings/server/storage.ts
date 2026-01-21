@@ -1,11 +1,12 @@
 import { db } from "./db";
 import { 
-  users, subjects, enrollments, attendance, qrCodes,
+  users, subjects, enrollments, attendance, qrCodes, schedules,
   type User, type InsertUser, 
   type Subject, type InsertSubject,
   type Attendance, type InsertAttendance,
   type Enrollment, type InsertEnrollment,
-  type QrCode, type InsertQrCode
+  type QrCode, type InsertQrCode,
+  type Schedule, type InsertSchedule
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -36,6 +37,12 @@ export interface IStorage {
   // QR Codes
   createQrCode(qr: InsertQrCode): Promise<QrCode>;
   getActiveQrCode(subjectId: number): Promise<QrCode | undefined>;
+
+  // Schedules
+  createSchedule(schedule: InsertSchedule): Promise<Schedule>;
+  getSchedulesBySubject(subjectId: number): Promise<Schedule[]>;
+  getSchedulesByTeacher(teacherId: number): Promise<(Schedule & { subjectName: string; subjectCode: string })[]>;
+  deleteSchedule(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -161,6 +168,37 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(qrCodes.createdAt))
       .limit(1);
     return qr;
+  }
+
+  async createSchedule(schedule: InsertSchedule): Promise<Schedule> {
+    const [newSchedule] = await db.insert(schedules).values(schedule).returning();
+    return newSchedule;
+  }
+
+  async getSchedulesBySubject(subjectId: number): Promise<Schedule[]> {
+    return db.select().from(schedules).where(eq(schedules.subjectId, subjectId));
+  }
+
+  async getSchedulesByTeacher(teacherId: number): Promise<(Schedule & { subjectName: string; subjectCode: string })[]> {
+    const result = await db.select({
+      id: schedules.id,
+      subjectId: schedules.subjectId,
+      dayOfWeek: schedules.dayOfWeek,
+      startTime: schedules.startTime,
+      endTime: schedules.endTime,
+      room: schedules.room,
+      subjectName: subjects.name,
+      subjectCode: subjects.code,
+    })
+    .from(schedules)
+    .innerJoin(subjects, eq(schedules.subjectId, subjects.id))
+    .where(eq(subjects.teacherId, teacherId));
+    
+    return result;
+  }
+
+  async deleteSchedule(id: number): Promise<void> {
+    await db.delete(schedules).where(eq(schedules.id, id));
   }
 }
 

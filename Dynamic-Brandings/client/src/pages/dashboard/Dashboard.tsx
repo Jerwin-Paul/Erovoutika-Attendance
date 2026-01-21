@@ -1,13 +1,15 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAttendance } from "@/hooks/use-attendance";
 import { useSubjects } from "@/hooks/use-subjects";
+import { useTeacherSchedules } from "@/hooks/use-schedules";
 import { 
   Users, 
   BookOpen, 
   CalendarCheck, 
   Clock,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  MapPin
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -173,10 +175,42 @@ function StudentDashboard() {
 
 function TeacherDashboard() {
   const { data: subjects } = useSubjects();
+  const { data: schedules } = useTeacherSchedules();
 
   // In a real app, we'd fetch aggregate stats
   const totalStudents = 120; // Mock
   const avgAttendance = "88%"; // Mock
+
+  // Group schedules by subject
+  const groupedSchedules = schedules?.reduce((acc, schedule) => {
+    const key = schedule.subjectId;
+    if (!acc[key]) {
+      acc[key] = {
+        subjectName: schedule.subjectName,
+        subjectCode: schedule.subjectCode,
+        schedules: []
+      };
+    }
+    acc[key].schedules.push({
+      dayOfWeek: schedule.dayOfWeek,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      room: schedule.room
+    });
+    return acc;
+  }, {} as Record<number, { subjectName: string; subjectCode: string; schedules: { dayOfWeek: string; startTime: string; endTime: string; room: string }[] }>) || {};
+
+  // Sort days in order
+  const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  
+  // Format time from 24h to 12h format
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const formattedHour = h % 12 || 12;
+    return `${formattedHour}:${minutes} ${ampm}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -187,37 +221,92 @@ function TeacherDashboard() {
         <StatsCard title="Classes Today" value="3" icon={Clock} description="Upcoming sessions" />
       </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>My Classes</CardTitle>
-          <CardDescription>Manage your subjects and students</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjects?.map(subject => (
-              <div key={subject.id} className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors group cursor-pointer">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                    <BookOpen className="h-5 w-5" />
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Schedule Card */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarCheck className="h-5 w-5 text-primary" />
+              Class Schedule
+            </CardTitle>
+            <CardDescription>Your weekly class schedule</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.values(groupedSchedules).length > 0 ? (
+                Object.values(groupedSchedules).map((group, idx) => (
+                  <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{group.subjectName}</h4>
+                        <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          {group.subjectCode}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {group.schedules
+                        .sort((a, b) => dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek))
+                        .map((sched, schedIdx) => (
+                          <div key={schedIdx} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-gray-100">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium text-gray-700 min-w-[90px]">{sched.dayOfWeek}</span>
+                              <span className="text-muted-foreground">
+                                {formatTime(sched.startTime)} - {formatTime(sched.endTime)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span>{sched.room}</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                  <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">{subject.code}</span>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground bg-gray-50 rounded-xl border border-dashed">
+                  No schedules set up yet.
                 </div>
-                <h3 className="font-semibold text-lg mb-1">{subject.name}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-2">{subject.description || "No description provided."}</p>
-                <div className="mt-4 pt-4 border-t flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">32 Students</span>
-                  <span className="text-primary font-medium group-hover:underline">View Class →</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* My Classes Card */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>My Classes</CardTitle>
+            <CardDescription>Manage your subjects and students</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {subjects?.map(subject => (
+                <div key={subject.id} className="p-4 rounded-xl border bg-card hover:border-primary/50 transition-colors group cursor-pointer">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">{subject.code}</span>
+                  </div>
+                  <h3 className="font-semibold text-base mb-1">{subject.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-1">{subject.description || "No description provided."}</p>
+                  <div className="mt-3 pt-3 border-t flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">32 Students</span>
+                    <span className="text-primary font-medium group-hover:underline">View →</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {(!subjects || subjects.length === 0) && (
-              <div className="col-span-full text-center py-12 text-muted-foreground bg-gray-50 rounded-xl border border-dashed">
-                No classes assigned yet.
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              {(!subjects || subjects.length === 0) && (
+                <div className="text-center py-8 text-muted-foreground bg-gray-50 rounded-xl border border-dashed">
+                  No classes assigned yet.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
