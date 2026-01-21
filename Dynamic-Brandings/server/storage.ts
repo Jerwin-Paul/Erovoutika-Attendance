@@ -40,6 +40,9 @@ export interface IStorage {
   // QR Codes
   createQrCode(qr: InsertQrCode): Promise<QrCode>;
   getActiveQrCode(subjectId: number): Promise<QrCode | undefined>;
+  validateAndConsumeQrCode(code: string): Promise<{ subjectId: number; isLate: boolean } | null>;
+  deactivateQrCode(subjectId: number): Promise<void>;
+  updateQrCodeLateMode(subjectId: number, isLate: boolean): Promise<void>;
 
   // Schedules
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
@@ -215,6 +218,35 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(qrCodes.createdAt))
       .limit(1);
     return qr;
+  }
+
+  async validateAndConsumeQrCode(code: string): Promise<{ subjectId: number; isLate: boolean } | null> {
+    // Find active QR code with this code
+    const [qr] = await db.select()
+      .from(qrCodes)
+      .where(and(eq(qrCodes.code, code), eq(qrCodes.active, true)))
+      .limit(1);
+    
+    if (!qr) return null;
+    
+    // Deactivate this QR code (single use)
+    await db.update(qrCodes).set({ active: false }).where(eq(qrCodes.id, qr.id));
+    
+    // Check if code contains late marker (format: SUBJ_TIMESTAMP_LATE or SUBJ_TIMESTAMP)
+    const isLate = code.includes('_LATE');
+    
+    return { subjectId: qr.subjectId, isLate };
+  }
+
+  async deactivateQrCode(subjectId: number): Promise<void> {
+    await db.update(qrCodes)
+      .set({ active: false })
+      .where(and(eq(qrCodes.subjectId, subjectId), eq(qrCodes.active, true)));
+  }
+
+  async updateQrCodeLateMode(subjectId: number, isLate: boolean): Promise<void> {
+    // Update the active QR code's late mode (in practice, we might store this differently)
+    // For now, this is a placeholder - the late mode is determined by code format
   }
 
   async createSchedule(schedule: InsertSchedule): Promise<Schedule> {

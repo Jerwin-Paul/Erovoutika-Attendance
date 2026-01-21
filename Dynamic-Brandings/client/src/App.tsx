@@ -15,6 +15,7 @@ import UserManagement from "@/pages/admin/UserManagement";
 import SystemSettings from "@/pages/settings/SystemSettings"; {/* added new vince */}
 import Attendance from "@/pages/attendance/Attendance";
 import AttendanceHistory from "@/pages/attendance/AttendanceHistory";
+import StudentAttendance from "@/pages/attendance/StudentAttendance";
 import Reports from "@/pages/reports/Reports";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout/Layout";
@@ -51,6 +52,18 @@ function RootRedirect() {
   return user ? <Redirect to="/dashboard" /> : <Redirect to="/login" />;
 }
 
+// Role-based attendance component
+function AttendanceRouter() {
+  const { user } = useAuth();
+  
+  if (user?.role === 'student') {
+    return <StudentAttendance />;
+  }
+  
+  // Teachers and admins see the teacher attendance page
+  return <Attendance />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -67,7 +80,7 @@ function Router() {
       </Route>
 
       <Route path="/attendance">
-        <ProtectedRoute component={Attendance} />
+        <ProtectedRoute component={AttendanceRouter} />
       </Route>
 
       <Route path="/attendance/history">

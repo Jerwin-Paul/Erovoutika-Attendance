@@ -204,6 +204,73 @@ export async function registerRoutes(
     res.status(201).json(qr);
   });
 
+  // Student scans QR code to record attendance
+  app.post('/api/attendance/scan', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as any;
+    
+    if (user.role !== 'student') {
+      return res.status(403).json({ message: "Only students can scan QR codes" });
+    }
+    
+    const { qrCode, subjectId: providedSubjectId } = req.body;
+    
+    // For demo purposes, if no actual QR code is provided, use the providedSubjectId
+    // In production, we would validate the actual QR code
+    let subjectId: number;
+    let isLate = false;
+    
+    if (qrCode && !qrCode.startsWith('SCAN_')) {
+      // Try to validate actual QR code
+      const result = await storage.validateAndConsumeQrCode(qrCode);
+      if (!result) {
+        return res.status(400).json({ message: "Invalid or expired QR code" });
+      }
+      subjectId = result.subjectId;
+      isLate = result.isLate;
+    } else if (providedSubjectId) {
+      // Demo mode - use provided subject ID
+      subjectId = providedSubjectId;
+    } else {
+      return res.status(400).json({ message: "QR code or subject ID required" });
+    }
+    
+    // Check if student is enrolled in this subject
+    const students = await storage.getSubjectStudents(subjectId);
+    const isEnrolled = students.some(s => s.id === user.id);
+    
+    if (!isEnrolled) {
+      return res.status(403).json({ message: "You are not enrolled in this subject" });
+    }
+    
+    // Check if already marked attendance today for this subject
+    const today = new Date().toISOString().split('T')[0];
+    const existingRecords = await storage.getAttendance(user.id, subjectId, today);
+    
+    if (existingRecords.length > 0) {
+      return res.status(400).json({ 
+        message: "Attendance already recorded for today",
+        status: existingRecords[0].status
+      });
+    }
+    
+    // Record attendance
+    const status = isLate ? 'late' : 'present';
+    const record = await storage.markAttendance({
+      studentId: user.id,
+      subjectId,
+      date: today,
+      status,
+      remarks: isLate ? 'Arrived late' : 'On time'
+    });
+    
+    res.status(201).json({ 
+      message: `Attendance recorded as ${status}`,
+      status,
+      record
+    });
+  });
+
   // === Schedules ===
   app.get(api.schedules.listByTeacher.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

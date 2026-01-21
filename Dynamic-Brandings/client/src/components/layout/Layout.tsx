@@ -149,7 +149,7 @@ export function Layout({ children }: LayoutProps) {
     student: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/subjects", icon: BookOpen, label: "My Subjects" },
-      { href: "/attendance", icon: CalendarCheck, label: "Attendance History" },
+      { href: "/attendance", icon: CalendarCheck, label: "Attendance" },
     ],
     teacher: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
