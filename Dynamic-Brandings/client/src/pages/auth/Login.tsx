@@ -28,7 +28,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 // Using z.enum directly for type safety with the backend schema
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  identifier: z.string().min(1, "Email or username is required"),
   password: z.string().min(1, "Password is required"),
   role: z.enum(["student", "teacher", "superadmin"]),
 });
@@ -50,7 +50,7 @@ export default function Login() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      identifier: "",
       password: "",
       role: "student",
     },
@@ -99,14 +99,14 @@ export default function Login() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="username"
+                  name="identifier"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Email or Username</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-9 h-11" placeholder="ID Number / Username" {...field} />
+                          <Input className="pl-9 h-11" placeholder="Email or Username" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />

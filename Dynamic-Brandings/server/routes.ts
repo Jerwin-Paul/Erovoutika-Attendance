@@ -18,7 +18,7 @@ export async function registerRoutes(
     passport.authenticate("local", (err: any, user: any) => {
       if (err) return next(err);
       if (!user) {
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res.status(401).json({ message: "Invalid email/username or password" });
       }
       req.logIn(user, (err) => {
         if (err) return next(err);
@@ -63,6 +63,10 @@ export async function registerRoutes(
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
+      }
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
       }
       const user = await storage.createUser(userData);
       res.status(201).json(user);

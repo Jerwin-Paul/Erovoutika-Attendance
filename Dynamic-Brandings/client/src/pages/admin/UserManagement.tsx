@@ -60,7 +60,8 @@ export default function UserManagement() {
 
   const filteredUsers = users?.filter(u => 
     u.fullName.toLowerCase().includes(search.toLowerCase()) || 
-    u.username.toLowerCase().includes(search.toLowerCase())
+    u.username.toLowerCase().includes(search.toLowerCase()) ||
+    ((u as any).email || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -79,7 +80,7 @@ export default function UserManagement() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by name or username..." 
+            placeholder="Search by name, username, or email..." 
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -107,6 +108,7 @@ export default function UserManagement() {
             <TableRow className="bg-gray-50/50">
               <TableHead>Full Name</TableHead>
               <TableHead>Username</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -114,12 +116,13 @@ export default function UserManagement() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">Loading...</TableCell>
+                <TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell>
               </TableRow>
             ) : filteredUsers?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.fullName}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">{user.username}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{(user as any).email}</TableCell>
                 <TableCell>
                   <span className={cn(
                     "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize",
@@ -181,6 +184,7 @@ function CreateUserDialog() {
     defaultValues: {
       fullName: "",
       username: "",
+      email: "",
       password: "",
       role: "student",
     },
@@ -235,6 +239,20 @@ function CreateUserDialog() {
                   <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. 12345678" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="e.g. user@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

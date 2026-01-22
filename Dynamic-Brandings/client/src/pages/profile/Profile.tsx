@@ -338,6 +338,12 @@ export default function Profile() {
                                             <Input
                                                 value={newUsername}
                                                 onChange={(e) => handleUsernameChange(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !usernameError && !isCheckingUsername && newUsername) {
+                                                        e.preventDefault();
+                                                        handleSaveUsername();
+                                                    }
+                                                }}
                                                 placeholder="Enter new username"
                                                 className={`max-w-xs ${usernameError ? 'border-destructive' : ''}`}
                                                 disabled={isPending}
