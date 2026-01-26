@@ -31,7 +31,10 @@ export function useAuth() {
         if (res.status === 401) {
           throw new Error("Invalid email/username or password");
         }
-        throw new Error("Login failed");
+        if (res.status >= 500) {
+          throw new Error("Server error. Please try again later or contact support.");
+        }
+        throw new Error("Unable to login. Please check your connection and try again.");
       }
       return await res.json() as User;
     },
