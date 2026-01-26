@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubjects } from "@/hooks/use-subjects";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { 
   Search,
   Calendar,
@@ -56,12 +57,45 @@ export default function AttendanceHistory() {
 
   // Fetch all attendance records for teacher's subjects
   const { data: attendanceRecords, isLoading } = useQuery<AttendanceRecord[]>({
-    queryKey: ['/api/attendance/teacher'],
+    queryKey: ['teacher-attendance', user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/attendance/teacher', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch attendance records');
-      return res.json();
+      if (!user?.id) return [];
+      
+      // Get subjects taught by this teacher
+      const { data: teacherSubjects } = await supabase
+        .from("subjects")
+        .select("id")
+        .eq("teacher_id", user.id);
+      
+      if (!teacherSubjects || teacherSubjects.length === 0) return [];
+      
+      const subjectIds = teacherSubjects.map(s => s.id);
+      
+      // Get attendance records for those subjects
+      const { data, error } = await supabase
+        .from("attendance")
+        .select(`
+          *,
+          users!attendance_student_id_fkey(full_name),
+          subjects!attendance_subject_id_fkey(name)
+        `)
+        .in("subject_id", subjectIds);
+      
+      if (error) throw new Error('Failed to fetch attendance records');
+      
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        studentId: r.student_id,
+        subjectId: r.subject_id,
+        date: r.date,
+        status: r.status,
+        timeIn: r.time_in,
+        remarks: r.remarks,
+        studentName: r.users?.full_name || "Unknown",
+        subjectName: r.subjects?.name || "Unknown",
+      }));
     },
+    enabled: !!user?.id,
   });
 
   // Filter records based on selections

@@ -1,20 +1,35 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type CreateUserRequest, type User } from "@shared/routes";
+import { type CreateUserRequest, type User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+
+// Helper to map database row (snake_case) to User type (camelCase)
+function mapDbRowToUser(row: any): User {
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    password: row.password,
+    fullName: row.full_name,
+    role: row.role,
+    profilePicture: row.profile_picture,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
+  };
+}
 
 export function useUsers(role?: "student" | "teacher" | "superadmin") {
-  const queryKey = [api.users.list.path, role];
+  const queryKey = ["users", role];
   
   return useQuery({
     queryKey,
     queryFn: async () => {
-      let url = api.users.list.path;
+      let query = supabase.from("users").select("*");
       if (role) {
-        url += `?role=${role}`;
+        query = query.eq("role", role);
       }
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch users");
-      return api.users.list.responses[200].parse(await res.json());
+      const { data, error } = await query;
+      if (error) throw new Error("Failed to fetch users");
+      return (data || []).map(mapDbRowToUser);
     },
   });
 }
@@ -25,21 +40,29 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: async (data: CreateUserRequest) => {
-      const validated = api.users.create.input.parse(data);
-      const res = await fetch(api.users.create.path, {
-        method: api.users.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-      });
+      // Map camelCase to snake_case for database
+      const dbData = {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        full_name: data.fullName,
+        role: data.role,
+        profile_picture: data.profilePicture,
+      };
       
-      if (!res.ok) {
-        const error = await res.json();
+      const { data: result, error } = await supabase
+        .from("users")
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) {
         throw new Error(error.message || "Failed to create user");
       }
-      return api.users.create.responses[201].parse(await res.json());
+      return mapDbRowToUser(result);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({ title: "User Created", description: "New user account has been successfully created." });
     },
     onError: (err) => {
@@ -58,15 +81,15 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const url = buildUrl(api.users.delete.path, { id });
-      const res = await fetch(url, {
-        method: api.users.delete.method,
-      });
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", id);
       
-      if (!res.ok) throw new Error("Failed to delete user");
+      if (error) throw new Error("Failed to delete user");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({ title: "User Deleted", description: "The user account has been removed." });
     },
   });
@@ -78,21 +101,29 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<CreateUserRequest> }) => {
-      const url = buildUrl(api.users.update.path, { id });
-      const res = await fetch(url, {
-        method: api.users.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      // Map camelCase to snake_case for database
+      const dbData: Record<string, any> = {};
+      if (data.username !== undefined) dbData.username = data.username;
+      if (data.email !== undefined) dbData.email = data.email;
+      if (data.password !== undefined) dbData.password = data.password;
+      if (data.fullName !== undefined) dbData.full_name = data.fullName;
+      if (data.role !== undefined) dbData.role = data.role;
+      if (data.profilePicture !== undefined) dbData.profile_picture = data.profilePicture;
+
+      const { data: result, error } = await supabase
+        .from("users")
+        .update(dbData)
+        .eq("id", id)
+        .select()
+        .single();
       
-      if (!res.ok) {
-        const error = await res.json();
+      if (error) {
         throw new Error(error.message || "Failed to update user");
       }
-      return api.users.update.responses[200].parse(await res.json());
+      return mapDbRowToUser(result);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({ title: "User Updated", description: "User account has been successfully updated." });
     },
     onError: (err) => {

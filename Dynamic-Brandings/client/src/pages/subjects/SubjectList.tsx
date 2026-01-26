@@ -76,7 +76,7 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { useSubjectSchedules, useCreateSchedule, useDeleteSchedule } from "@/hooks/use-schedules";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
+import { supabase } from "@/lib/supabase";
 
 export default function SubjectList() {
   const { user } = useAuth();
@@ -608,14 +608,14 @@ function DeleteSubjectDialog({ subject, open, onClose }: { subject: Subject | nu
 
   const { mutate: deleteSubject, isPending } = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/subjects/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error("Failed to delete subject");
+      const { error } = await supabase
+        .from("subjects")
+        .delete()
+        .eq("id", id);
+      if (error) throw new Error("Failed to delete subject");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.subjects.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
       toast({ title: "Subject Deleted", description: "The subject has been removed." });
       onClose();
     },

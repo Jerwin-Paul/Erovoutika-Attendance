@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@shared/routes";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import {
     User,
@@ -43,20 +43,23 @@ export default function Profile() {
 
     const { mutate: updateProfile, isPending } = useMutation({
         mutationFn: async (data: { profilePicture?: string; username?: string }) => {
-            const res = await fetch(`/api/users/${user?.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(data),
-            });
-            if (!res.ok) {
-                const error = await res.json();
+            // Map to snake_case for database
+            const dbData: Record<string, any> = {};
+            if (data.profilePicture !== undefined) dbData.profile_picture = data.profilePicture;
+            if (data.username !== undefined) dbData.username = data.username;
+            
+            const { error } = await supabase
+                .from("users")
+                .update(dbData)
+                .eq("id", user?.id);
+            
+            if (error) {
                 throw new Error(error.message || "Failed to update profile");
             }
-            return res.json();
+            return { success: true };
         },
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+            queryClient.invalidateQueries({ queryKey: ["auth-user"] });
             refreshUser?.();
             if (variables.username) {
                 toast({
@@ -85,12 +88,14 @@ export default function Profile() {
         if (!username || username === user?.username) return false;
 
         try {
-            const res = await fetch(`/api/users/check-username?username=${encodeURIComponent(username)}`, {
-                credentials: 'include',
-            });
-            if (!res.ok) return false;
-            const data = await res.json();
-            return data.exists;
+            const { data, error } = await supabase
+                .from("users")
+                .select("id")
+                .eq("username", username)
+                .maybeSingle();
+            
+            if (error) return false;
+            return !!data;
         } catch {
             return false;
         }

@@ -4,6 +4,7 @@ import { useSubjects } from "@/hooks/use-subjects";
 import { useTeacherSchedules } from "@/hooks/use-schedules";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
 import { 
   Users, 
   BookOpen, 
@@ -193,16 +194,37 @@ function StudentDashboard() {
 }
 
 function TeacherDashboard() {
+  const { user } = useAuth();
   const { data: subjects } = useSubjects();
   const { data: schedules } = useTeacherSchedules();
   const [, setLocation] = useLocation();
   const { data: teacherStats } = useQuery({
-    queryKey: ['/api/teacher/stats'],
+    queryKey: ['teacher-stats', user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/teacher/stats', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch teacher stats');
-      return res.json() as Promise<{ totalStudents: number }>;
-    }
+      if (!user?.id) return { totalStudents: 0 };
+      
+      // Get subjects taught by this teacher
+      const { data: teacherSubjects } = await supabase
+        .from("subjects")
+        .select("id")
+        .eq("teacher_id", user.id);
+      
+      if (!teacherSubjects || teacherSubjects.length === 0) {
+        return { totalStudents: 0 };
+      }
+      
+      const subjectIds = teacherSubjects.map(s => s.id);
+      
+      // Count unique students enrolled in those subjects
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("student_id")
+        .in("subject_id", subjectIds);
+      
+      const uniqueStudents = new Set(enrollments?.map(e => e.student_id) || []);
+      return { totalStudents: uniqueStudents.size };
+    },
+    enabled: !!user?.id,
   });
 
   const totalStudents = teacherStats?.totalStudents || 0;

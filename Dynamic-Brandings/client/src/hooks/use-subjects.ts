@@ -1,26 +1,55 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type CreateSubjectRequest } from "@shared/routes";
+import { type CreateSubjectRequest, type Subject, type User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+
+// Helper to map database row (snake_case) to Subject type (camelCase)
+function mapDbRowToSubject(row: any): Subject {
+  return {
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    teacherId: row.teacher_id,
+    description: row.description,
+  };
+}
+
+// Helper to map database row to User type
+function mapDbRowToUser(row: any): User {
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    password: row.password,
+    fullName: row.full_name,
+    role: row.role,
+    profilePicture: row.profile_picture,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
+  };
+}
 
 export function useSubjects() {
   return useQuery({
-    queryKey: [api.subjects.list.path],
+    queryKey: ["subjects"],
     queryFn: async () => {
-      const res = await fetch(api.subjects.list.path);
-      if (!res.ok) throw new Error("Failed to fetch subjects");
-      return api.subjects.list.responses[200].parse(await res.json());
+      const { data, error } = await supabase.from("subjects").select("*");
+      if (error) throw new Error("Failed to fetch subjects");
+      return (data || []).map(mapDbRowToSubject);
     },
   });
 }
 
 export function useSubject(id: number) {
   return useQuery({
-    queryKey: [api.subjects.get.path, id],
+    queryKey: ["subjects", id],
     queryFn: async () => {
-      const url = buildUrl(api.subjects.get.path, { id });
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch subject");
-      return api.subjects.get.responses[200].parse(await res.json());
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw new Error("Failed to fetch subject");
+      return mapDbRowToSubject(data);
     },
     enabled: !!id,
   });
@@ -28,12 +57,29 @@ export function useSubject(id: number) {
 
 export function useSubjectStudents(subjectId: number) {
   return useQuery({
-    queryKey: [api.subjects.students.path, subjectId],
+    queryKey: ["subject-students", subjectId],
     queryFn: async () => {
-      const url = buildUrl(api.subjects.students.path, { id: subjectId });
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch students");
-      return api.subjects.students.responses[200].parse(await res.json());
+      // Get enrolled student IDs
+      const { data: enrollments, error: enrollError } = await supabase
+        .from("enrollments")
+        .select("student_id")
+        .eq("subject_id", subjectId);
+      
+      if (enrollError) throw new Error("Failed to fetch enrollments");
+      
+      if (!enrollments || enrollments.length === 0) {
+        return [];
+      }
+      
+      // Get user details for enrolled students
+      const studentIds = enrollments.map(e => e.student_id);
+      const { data: students, error: studentsError } = await supabase
+        .from("users")
+        .select("*")
+        .in("id", studentIds);
+      
+      if (studentsError) throw new Error("Failed to fetch students");
+      return (students || []).map(mapDbRowToUser);
     },
     enabled: !!subjectId,
   });
@@ -45,18 +91,24 @@ export function useCreateSubject() {
 
   return useMutation({
     mutationFn: async (data: CreateSubjectRequest) => {
-      const validated = api.subjects.create.input.parse(data);
-      const res = await fetch(api.subjects.create.path, {
-        method: api.subjects.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-      });
+      const dbData = {
+        name: data.name,
+        code: data.code,
+        teacher_id: data.teacherId,
+        description: data.description,
+      };
       
-      if (!res.ok) throw new Error("Failed to create subject");
-      return api.subjects.create.responses[201].parse(await res.json());
+      const { data: result, error } = await supabase
+        .from("subjects")
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) throw new Error("Failed to create subject");
+      return mapDbRowToSubject(result);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.subjects.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
       toast({ title: "Subject Created", description: "New subject has been added to the catalog." });
     },
   });
@@ -68,18 +120,17 @@ export function useEnrollStudent() {
 
   return useMutation({
     mutationFn: async ({ subjectId, studentId }: { subjectId: number; studentId: number }) => {
-      const url = buildUrl(api.subjects.enroll.path, { id: subjectId });
-      const res = await fetch(url, {
-        method: api.subjects.enroll.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId }),
-      });
+      const { data, error } = await supabase
+        .from("enrollments")
+        .insert({ subject_id: subjectId, student_id: studentId })
+        .select()
+        .single();
       
-      if (!res.ok) throw new Error("Failed to enroll student");
-      return await res.json();
+      if (error) throw new Error("Failed to enroll student");
+      return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [api.subjects.students.path, variables.subjectId] });
+      queryClient.invalidateQueries({ queryKey: ["subject-students", variables.subjectId] });
       toast({ title: "Enrolled", description: "Student successfully enrolled in the subject." });
     },
   });

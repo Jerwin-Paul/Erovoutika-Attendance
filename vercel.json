@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd Dynamic-Brandings && npm install && npm run build:client",
+  "outputDirectory": "Dynamic-Brandings/dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
