@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubjects, useSubjectStudents } from "@/hooks/use-subjects";
 import { useTeacherSchedules } from "@/hooks/use-schedules";
+import { useAttendance } from "@/hooks/use-attendance";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import { 
   Search,
   Users,
@@ -48,6 +51,7 @@ export default function Attendance() {
   const { user } = useAuth();
   const { data: subjects } = useSubjects();
   const { data: schedules } = useTeacherSchedules();
+  const { toast } = useToast();
   
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -66,6 +70,53 @@ export default function Attendance() {
   const { data: students } = useSubjectStudents(
     selectedSubjectId ? parseInt(selectedSubjectId) : 0
   );
+
+  // Fetch today's attendance records for selected subject (real-time polling)
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const { data: todayAttendance, refetch: refetchAttendance } = useAttendance({
+    subjectId: selectedSubjectId ? parseInt(selectedSubjectId) : undefined,
+    date: today
+  });
+
+  // Poll for attendance updates when session is active
+  useEffect(() => {
+    if (sessionState === 'active' && selectedSubjectId) {
+      const pollInterval = setInterval(() => {
+        refetchAttendance();
+      }, 3000); // Poll every 3 seconds
+      return () => clearInterval(pollInterval);
+    }
+  }, [sessionState, selectedSubjectId, refetchAttendance]);
+
+  // Sync attendance records with database when new scans come in or students load
+  useEffect(() => {
+    if (students && students.length > 0) {
+      setAttendanceRecords(prev => {
+        return students.map(student => {
+          const dbRecord = todayAttendance?.find(a => a.studentId === student.id);
+          const localRecord = prev.find(r => r.studentId === student.id);
+          
+          // If there's a database record, use it
+          if (dbRecord) {
+            return {
+              studentId: student.id,
+              studentName: student.fullName,
+              timeIn: dbRecord.timeIn ? format(new Date(dbRecord.timeIn), 'h:mm a') : null,
+              status: dbRecord.status as AttendanceStatus
+            };
+          }
+          
+          // Otherwise use local record or create new
+          return localRecord || {
+            studentId: student.id,
+            studentName: student.fullName,
+            timeIn: null,
+            status: null
+          };
+        });
+      });
+    }
+  }, [todayAttendance, students]);
 
   // Update current time every second
   useEffect(() => {
@@ -113,18 +164,6 @@ export default function Attendance() {
     }
   }, [currentOrNextSubject, subjects, selectedSubjectId]);
 
-  // Initialize attendance records when students load
-  useEffect(() => {
-    if (students && students.length > 0) {
-      setAttendanceRecords(students.map(student => ({
-        studentId: student.id,
-        studentName: student.fullName,
-        timeIn: null,
-        status: null
-      })));
-    }
-  }, [students]);
-
   // Filter students by search
   const filteredRecords = attendanceRecords.filter(record =>
     record.studentName.toLowerCase().includes(search.toLowerCase())
@@ -140,12 +179,35 @@ export default function Attendance() {
     return { total, present, late, absent, excused };
   }, [attendanceRecords]);
 
-  // Generate a new unique QR token
-  const generateNewToken = useCallback(() => {
+  // Generate a new unique QR token and persist to database
+  const generateNewToken = useCallback(async (isLateMode = false) => {
     const newToken = uuidv4();
-    setCurrentQRToken(newToken);
-    return newToken;
-  }, []);
+    const tokenWithMode = isLateMode ? `${newToken}_LATE` : newToken;
+    
+    if (selectedSubjectId) {
+      try {
+        // Deactivate any existing QR codes for this subject
+        await supabase
+          .from("qr_codes")
+          .update({ active: false })
+          .eq("subject_id", parseInt(selectedSubjectId));
+        
+        // Create new QR code in database
+        await supabase
+          .from("qr_codes")
+          .insert({ 
+            subject_id: parseInt(selectedSubjectId), 
+            code: tokenWithMode, 
+            active: true 
+          });
+      } catch (error) {
+        console.error("Failed to persist QR code:", error);
+      }
+    }
+    
+    setCurrentQRToken(tokenWithMode);
+    return tokenWithMode;
+  }, [selectedSubjectId]);
 
   // QR Code data structure - contains token, subject, and timestamp for validation
   const qrCodeData = useMemo(() => {
@@ -186,34 +248,91 @@ export default function Attendance() {
     return true;
   }, [currentQRToken, sessionState, wasResumed, generateNewToken]);
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     setSessionState('active');
     setWasResumed(false);
     setScanCount(0);
     // Generate initial QR code token when session starts
-    generateNewToken();
+    await generateNewToken(false);
+    toast({
+      title: "Session Started",
+      description: "Students can now scan the QR code to check in."
+    });
   };
 
-  const handlePauseSession = () => {
+  const handlePauseSession = async () => {
     setSessionState('paused');
+    // Deactivate current QR code when pausing
+    if (selectedSubjectId) {
+      await supabase
+        .from("qr_codes")
+        .update({ active: false })
+        .eq("subject_id", parseInt(selectedSubjectId));
+    }
+    setCurrentQRToken("");
+    toast({
+      title: "Session Paused",
+      description: "QR code scanning is temporarily disabled."
+    });
   };
 
-  const handleResumeSession = () => {
+  const handleResumeSession = async () => {
     setSessionState('active');
-    setWasResumed(true); // Mark that session was resumed - late scanners will be marked absent
-    // Generate new token when resuming
-    generateNewToken();
+    setWasResumed(true); // Mark that session was resumed - late scanners will be marked late
+    // Generate new token with late mode when resuming
+    await generateNewToken(true);
+    toast({
+      title: "Session Resumed",
+      description: "Students scanning now will be marked as late.",
+      variant: "default"
+    });
   };
 
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
     setSessionState('inactive');
     setWasResumed(false);
+    
+    // Deactivate QR code in database
+    if (selectedSubjectId) {
+      await supabase
+        .from("qr_codes")
+        .update({ active: false })
+        .eq("subject_id", parseInt(selectedSubjectId));
+    }
     setCurrentQRToken(""); // Invalidate QR code
-    // Mark all students without status as absent
+    
+    // Mark all students without status as absent in the database
+    const studentsToMarkAbsent = attendanceRecords.filter(r => !r.status);
+    for (const record of studentsToMarkAbsent) {
+      try {
+        await supabase
+          .from("attendance")
+          .insert({
+            student_id: record.studentId,
+            subject_id: parseInt(selectedSubjectId),
+            date: today,
+            status: 'absent',
+            time_in: new Date().toISOString(),
+            remarks: 'Marked absent - did not scan QR'
+          });
+      } catch (error) {
+        console.error("Failed to mark absent:", error);
+      }
+    }
+    
+    // Update local state
     setAttendanceRecords(prev => prev.map(record => ({
       ...record,
       status: record.status || 'absent'
     })));
+    
+    // Refresh attendance data
+    refetchAttendance();
+    
+    toast({
+      title: "Session Ended",
+      description: `${studentsToMarkAbsent.length} students marked as absent.`
+    });
   };
 
   const handleStatusChange = (studentId: number, status: AttendanceStatus) => {
@@ -234,9 +353,14 @@ export default function Attendance() {
   };
 
   // Manual QR regeneration (teacher can force regenerate if needed)
-  const handleManualRegenerate = () => {
+  const handleManualRegenerate = async () => {
     if (sessionState === 'active') {
-      generateNewToken();
+      await generateNewToken(wasResumed);
+      setScanCount(prev => prev + 1);
+      toast({
+        title: "QR Code Regenerated",
+        description: "Previous QR code is now invalid."
+      });
     }
   };
 
