@@ -24,27 +24,20 @@ export function useAttendance(filters?: { subjectId?: number; studentId?: number
   return useQuery({
     queryKey,
     queryFn: async () => {
-      let query = supabase
-        .from("attendance")
-        .select(`
-          *,
-          users!attendance_student_id_fkey(full_name),
-          subjects!attendance_subject_id_fkey(name)
-        `);
+      const params = new URLSearchParams();
+      if (filters?.subjectId) params.append('subjectId', filters.subjectId.toString());
+      if (filters?.studentId) params.append('studentId', filters.studentId.toString());
+      if (filters?.date) params.append('date', filters.date);
       
-      if (filters?.subjectId) {
-        query = query.eq("subject_id", filters.subjectId);
-      }
-      if (filters?.studentId) {
-        query = query.eq("student_id", filters.studentId);
-      }
-      if (filters?.date) {
-        query = query.eq("date", filters.date);
+      const response = await fetch(`/api/attendance?${params}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch attendance');
       }
       
-      const { data, error } = await query;
-      if (error) throw new Error("Failed to fetch attendance");
-      return (data || []).map(mapDbRowToAttendance);
+      return response.json();
     },
   });
 }
@@ -55,27 +48,21 @@ export function useMarkAttendance() {
 
   return useMutation({
     mutationFn: async (data: MarkAttendanceRequest) => {
-      const dbData = {
-        student_id: data.studentId,
-        subject_id: data.subjectId,
-        date: data.date,
-        status: data.status,
-        remarks: data.remarks,
-        time_in: new Date().toISOString(),
-      };
+      const response = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
       
-      const { data: result, error } = await supabase
-        .from("attendance")
-        .insert(dbData)
-        .select(`
-          *,
-          users!attendance_student_id_fkey(full_name),
-          subjects!attendance_subject_id_fkey(name)
-        `)
-        .single();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to mark attendance');
+      }
       
-      if (error) throw new Error("Failed to mark attendance");
-      return mapDbRowToAttendance(result);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
@@ -96,21 +83,21 @@ export function useGenerateQR() {
 
   return useMutation({
     mutationFn: async ({ subjectId, code }: { subjectId: number; code: string }) => {
-      // First deactivate any existing QR codes for this subject
-      await supabase
-        .from("qr_codes")
-        .update({ active: false })
-        .eq("subject_id", subjectId);
+      const response = await fetch(`/api/subjects/${subjectId}/qr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ code }),
+      });
       
-      // Create new QR code
-      const { data, error } = await supabase
-        .from("qr_codes")
-        .insert({ subject_id: subjectId, code, active: true })
-        .select()
-        .single();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate QR code');
+      }
       
-      if (error) throw new Error("Failed to generate QR code");
-      return data;
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "QR Code Generated", description: "Students can now scan to check in." });

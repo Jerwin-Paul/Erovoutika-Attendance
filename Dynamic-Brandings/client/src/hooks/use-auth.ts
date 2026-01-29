@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type LoginRequest, type User } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
 
 // Storage key for persisting user session
 const USER_STORAGE_KEY = "attendance_user";
@@ -48,39 +47,21 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginRequest) => {
-      const { identifier, password } = credentials;
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(credentials),
+      });
       
-      // Query the users table directly via Supabase
-      // Try to find user by email first, then by username
-      let { data: userData, error } = await supabase
-        .from("users")
-        .select("*")
-        .or(`email.eq.${identifier},username.eq.${identifier}`)
-        .single();
-
-      if (error || !userData) {
-        throw new Error("Invalid email/username or password");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
       }
-
-      // Verify password (currently plaintext comparison - matches your existing backend)
-      // Note: In production, you should use proper password hashing
-      if (userData.password !== password) {
-        throw new Error("Invalid email/username or password");
-      }
-
-      // Map database columns to User type (handle snake_case to camelCase)
-      const user: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        password: userData.password,
-        fullName: userData.full_name,
-        role: userData.role,
-        profilePicture: userData.profile_picture,
-        createdAt: userData.created_at ? new Date(userData.created_at) : null,
-      };
-
-      return user;
+      
+      return response.json();
     },
     onSuccess: (user) => {
       // Store user in localStorage for persistence
@@ -100,11 +81,28 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // Clear localStorage
-      storeUser(null);
-      return Promise.resolve();
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
+      // Clear localStorage
+      storeUser(null);
+      queryClient.setQueryData(["auth-user"], null);
+      queryClient.clear();
+      setLocation("/login");
+      toast({ title: "Logged out", description: "See you next time!" });
+    },
+    onError: (error) => {
+      // Even if API call fails, clear local state
+      storeUser(null);
       queryClient.setQueryData(["auth-user"], null);
       queryClient.clear();
       setLocation("/login");
@@ -113,29 +111,24 @@ export function useAuth() {
   });
 
   const refreshUser = async () => {
-    // Re-fetch user data from database if we have a stored user
-    const storedUser = getStoredUser();
-    if (storedUser?.id) {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", storedUser.id)
-        .single();
+    try {
+      const response = await fetch('/api/user', {
+        credentials: 'include',
+      });
       
-      if (userData) {
-        const user: User = {
-          id: userData.id,
-          username: userData.username,
-          email: userData.email,
-          password: userData.password,
-          fullName: userData.full_name,
-          role: userData.role,
-          profilePicture: userData.profile_picture,
-          createdAt: userData.created_at ? new Date(userData.created_at) : null,
-        };
+      if (response.ok) {
+        const user = await response.json();
         storeUser(user);
         queryClient.setQueryData(["auth-user"], user);
+      } else {
+        // If API call fails, clear stored user
+        storeUser(null);
+        queryClient.setQueryData(["auth-user"], null);
       }
+    } catch (error) {
+      // If API call fails, clear stored user
+      storeUser(null);
+      queryClient.setQueryData(["auth-user"], null);
     }
   };
 
