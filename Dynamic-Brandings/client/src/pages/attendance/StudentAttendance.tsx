@@ -205,6 +205,8 @@ export default function StudentAttendance() {
         throw new Error("Invalid QR code data");
       }
 
+      console.log('Sending scan request with token:', token, 'subjectId:', subjectId);
+
       // Validate and mark attendance via API
       const response = await fetch('/api/attendance/scan', {
         method: 'POST',
@@ -216,7 +218,26 @@ export default function StudentAttendance() {
         })
       });
 
-      const result = await response.json();
+      console.log('Scan response status:', response.status);
+
+      // Handle empty response (e.g., 401 Unauthorized)
+      const responseText = await response.text();
+      console.log('Scan response text:', responseText);
+      
+      if (!responseText) {
+        if (response.status === 401) {
+          throw new Error("Please log in again to scan attendance");
+        }
+        throw new Error("Server returned empty response. Please try again.");
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error(`Server error (${response.status}): ${responseText || 'Empty response'}`);
+      }
 
       if (!response.ok) {
         if (response.status === 400 && result.message?.includes('already')) {

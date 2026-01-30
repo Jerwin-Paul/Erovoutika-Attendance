@@ -283,65 +283,81 @@ export async function registerRoutes(
 
   // Student scans QR code to record attendance
   app.post('/api/attendance/scan', async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log('QR scan request received:', { body: req.body, authenticated: req.isAuthenticated() });
+    
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Please log in to scan attendance" });
+    }
     const user = req.user as any;
+    console.log('User attempting scan:', { id: user.id, role: user.role });
 
     if (user.role !== 'student') {
       return res.status(403).json({ message: "Only students can scan QR codes" });
     }
 
-    const { qrCode } = req.body;
+    try {
+      const { qrCode } = req.body;
 
-    // Require valid QR code
-    if (!qrCode) {
-      return res.status(400).json({ message: "QR code is required" });
-    }
+      // Require valid QR code
+      if (!qrCode) {
+        return res.status(400).json({ message: "QR code is required" });
+      }
 
-    let subjectId: number;
-    let isLate = false;
+      console.log('Validating QR code:', qrCode);
 
-    // Validate the QR code against database
-    const result = await storage.validateAndConsumeQrCode(qrCode);
-    if (!result) {
-      return res.status(400).json({ message: "Invalid or expired QR code. Please ask your teacher to regenerate." });
-    }
-    subjectId = result.subjectId;
-    isLate = result.isLate;
+      let subjectId: number;
+      let isLate = false;
 
-    // Check if student is enrolled in this subject
-    const students = await storage.getSubjectStudents(subjectId);
-    const isEnrolled = students.some(s => s.id === user.id);
+      // Validate the QR code against database
+      const result = await storage.validateAndConsumeQrCode(qrCode);
+      if (!result) {
+        return res.status(400).json({ message: "Invalid or expired QR code. Please ask your teacher to regenerate." });
+      }
+      subjectId = result.subjectId;
+      isLate = result.isLate;
 
-    if (!isEnrolled) {
-      return res.status(403).json({ message: "You are not enrolled in this subject" });
-    }
+      console.log('QR code validated, subjectId:', subjectId, 'isLate:', isLate);
 
-    // Check if already marked attendance today for this subject
-    const today = new Date().toISOString().split('T')[0];
-    const existingRecords = await storage.getAttendance(user.id, subjectId, today);
+      // Check if student is enrolled in this subject
+      const students = await storage.getSubjectStudents(subjectId);
+      const isEnrolled = students.some(s => s.id === user.id);
 
-    if (existingRecords.length > 0) {
-      return res.status(400).json({
-        message: "Attendance already recorded for today",
-        status: existingRecords[0].status
+      if (!isEnrolled) {
+        return res.status(403).json({ message: "You are not enrolled in this subject" });
+      }
+
+      // Check if already marked attendance today for this subject
+      const today = new Date().toISOString().split('T')[0];
+      const existingRecords = await storage.getAttendance(user.id, subjectId, today);
+
+      if (existingRecords.length > 0) {
+        return res.status(400).json({
+          message: "Attendance already recorded for today",
+          status: existingRecords[0].status
+        });
+      }
+
+      // Record attendance
+      const status = isLate ? 'late' : 'present';
+      const record = await storage.markAttendance({
+        studentId: user.id,
+        subjectId,
+        date: today,
+        status,
+        remarks: isLate ? 'Arrived late' : 'On time'
       });
+
+      console.log('Attendance recorded successfully:', { studentId: user.id, subjectId, status });
+
+      res.status(201).json({
+        message: `Attendance recorded as ${status}`,
+        status,
+        record
+      });
+    } catch (error) {
+      console.error('Error in QR scan endpoint:', error);
+      res.status(500).json({ message: "Server error while processing scan" });
     }
-
-    // Record attendance
-    const status = isLate ? 'late' : 'present';
-    const record = await storage.markAttendance({
-      studentId: user.id,
-      subjectId,
-      date: today,
-      status,
-      remarks: isLate ? 'Arrived late' : 'On time'
-    });
-
-    res.status(201).json({
-      message: `Attendance recorded as ${status}`,
-      status,
-      record
-    });
   });
 
   // === Schedules ===
