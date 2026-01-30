@@ -90,8 +90,8 @@ export default function Reports() {
         .from("attendance")
         .select(`
           *,
-          users!attendance_student_id_fkey(full_name),
-          subjects!attendance_subject_id_fkey(name)
+          student:users!student_id(full_name),
+          subject:subjects!subject_id(name)
         `)
         .in("subject_id", subjectIds);
       
@@ -105,8 +105,8 @@ export default function Reports() {
         status: r.status,
         timeIn: r.time_in,
         remarks: r.remarks,
-        studentName: r.users?.full_name || "Unknown",
-        subjectName: r.subjects?.name || "Unknown",
+        studentName: r.student?.full_name || "Unknown",
+        subjectName: r.subject?.name || "Unknown",
       }));
     },
     enabled: !!user?.id,

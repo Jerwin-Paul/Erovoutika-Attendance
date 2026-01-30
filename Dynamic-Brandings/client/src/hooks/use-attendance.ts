@@ -13,8 +13,8 @@ function mapDbRowToAttendance(row: any): Attendance & { studentName: string; sub
     status: row.status,
     timeIn: row.time_in ? new Date(row.time_in) : null,
     remarks: row.remarks,
-    studentName: row.users?.full_name || "Unknown",
-    subjectName: row.subjects?.name || "Unknown",
+    studentName: row.student?.full_name || row.users?.full_name || "Unknown",
+    subjectName: row.subject?.name || row.subjects?.name || "Unknown",
   };
 }
 
@@ -25,18 +25,23 @@ export function useAttendance(filters?: { subjectId?: number; studentId?: number
     queryKey,
     refetchInterval: options?.refetchInterval,
     queryFn: async () => {
+      console.log('Fetching attendance with filters:', filters);
+      
+      // Use simpler query without explicit foreign key syntax
+      // Supabase will automatically detect the relationships
       let query = supabase
         .from("attendance")
         .select(`
           *,
-          users!attendance_student_id_fkey(full_name),
-          subjects!attendance_subject_id_fkey(name)
+          student:users!student_id(full_name),
+          subject:subjects!subject_id(name)
         `);
       
       if (filters?.subjectId) {
         query = query.eq("subject_id", filters.subjectId);
       }
       if (filters?.studentId) {
+        console.log('Filtering by student_id:', filters.studentId, 'type:', typeof filters.studentId);
         query = query.eq("student_id", filters.studentId);
       }
       if (filters?.date) {
@@ -44,7 +49,11 @@ export function useAttendance(filters?: { subjectId?: number; studentId?: number
       }
       
       const { data, error } = await query;
-      if (error) throw new Error("Failed to fetch attendance");
+      console.log('Attendance query result:', { data, error });
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error("Failed to fetch attendance: " + error.message);
+      }
       return (data || []).map(mapDbRowToAttendance);
     },
   });
@@ -70,12 +79,12 @@ export function useMarkAttendance() {
         .insert(dbData)
         .select(`
           *,
-          users!attendance_student_id_fkey(full_name),
-          subjects!attendance_subject_id_fkey(name)
+          student:users!student_id(full_name),
+          subject:subjects!subject_id(name)
         `)
         .single();
       
-      if (error) throw new Error("Failed to mark attendance");
+      if (error) throw new Error("Failed to mark attendance: " + error.message);
       return mapDbRowToAttendance(result);
     },
     onSuccess: () => {

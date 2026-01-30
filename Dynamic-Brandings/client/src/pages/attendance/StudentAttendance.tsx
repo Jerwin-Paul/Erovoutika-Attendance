@@ -83,6 +83,12 @@ export default function StudentAttendance() {
     studentId: user?.id
   }, { refetchInterval: 5000 }); // Poll every 5 seconds
 
+  // Debug: Log user and attendance data
+  useEffect(() => {
+    console.log('Student user:', user);
+    console.log('Student attendance data:', attendance);
+  }, [user, attendance]);
+
   // Generate month options (last 12 months)
   const monthOptions = useMemo(() => {
     const months = [];
@@ -165,6 +171,17 @@ export default function StudentAttendance() {
   // Process the scanned QR code
   const processQRCode = useCallback(async (qrData: string) => {
     if (isProcessing) return;
+    
+    // Validate QR data before processing - it must be valid JSON
+    console.log('Raw QR data received:', qrData);
+    console.log('QR data length:', qrData?.length);
+    
+    // Quick validation - must look like JSON and have minimum length
+    if (!qrData || qrData.length < 20 || !qrData.startsWith('{') || !qrData.endsWith('}')) {
+      console.log('Invalid QR format, ignoring...');
+      return; // Silently ignore partial/invalid scans
+    }
+    
     setIsProcessing(true);
     
     // Stop scanner immediately to prevent multiple scans
@@ -176,7 +193,9 @@ export default function StudentAttendance() {
       
       try {
         parsedData = JSON.parse(qrData);
-      } catch {
+        console.log('Parsed QR data:', parsedData);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
         throw new Error("Invalid QR code format. Please scan a valid attendance QR code.");
       }
 
@@ -248,9 +267,10 @@ export default function StudentAttendance() {
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 10,
+            fps: 5, // Reduced FPS to prevent rapid partial scans
             qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
+            aspectRatio: 1.0,
+            disableFlip: false
           },
           (decodedText) => {
             console.log("Scanned QR:", decodedText);
