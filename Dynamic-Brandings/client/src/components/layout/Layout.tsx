@@ -14,7 +14,8 @@ import {
   GraduationCap,
   ChevronDown,
   History,
-  FileText
+  FileText,
+  UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -170,6 +171,7 @@ export function Layout({ children }: LayoutProps) {
     superadmin: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/users", icon: Users, label: "User Management" },
+      { href: "/enrollments", icon: UserPlus, label: "Enrollments" },
       { href: "/settings", icon: Settings, label: "System Settings" },
     ]
   };

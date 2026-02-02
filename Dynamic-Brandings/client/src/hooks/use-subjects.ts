@@ -164,7 +164,30 @@ export function useEnrollStudent() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["subject-students", variables.subjectId] });
+      queryClient.invalidateQueries({ queryKey: ["student-subjects"] });
       toast({ title: "Enrolled", description: "Student successfully enrolled in the subject." });
+    },
+  });
+}
+
+export function useUnenrollStudent() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ subjectId, studentId }: { subjectId: number; studentId: number }) => {
+      const { error } = await supabase
+        .from("enrollments")
+        .delete()
+        .eq("subject_id", subjectId)
+        .eq("student_id", studentId);
+      
+      if (error) throw new Error("Failed to unenroll student");
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["subject-students", variables.subjectId] });
+      queryClient.invalidateQueries({ queryKey: ["student-subjects"] });
+      toast({ title: "Unenrolled", description: "Student has been removed from the subject." });
     },
   });
 }
