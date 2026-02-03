@@ -656,7 +656,7 @@ export default function StudentAttendance() {
                   <TableRow className="bg-muted/50">
                     <TableHead>Date</TableHead>
                     <TableHead>Subject</TableHead>
-                    <TableHead>Time In</TableHead>
+                    <TableHead className="whitespace-nowrap">Time In</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
@@ -670,7 +670,7 @@ export default function StudentAttendance() {
                       <TableCell>
                         <p className="font-medium">{record.subjectName || 'Unknown'}</p>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {record.timeIn && record.timeIn instanceof Date && !isNaN(record.timeIn.getTime())
                           ? record.timeIn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
                           : '-'}
