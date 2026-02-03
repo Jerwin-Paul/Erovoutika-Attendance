@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAttendance } from "@/hooks/use-attendance";
 import { useSubjects } from "@/hooks/use-subjects";
 import { useTeacherSchedules } from "@/hooks/use-schedules";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -448,6 +449,8 @@ function TeacherDashboard() {
 }
 
 function AdminDashboard() {
+  const { settings } = useSystemSettings();
+  
   return (
     <div className="space-y-6">
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -475,7 +478,7 @@ function AdminDashboard() {
                 <XAxis dataKey="day" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="attendance" fill="#006837" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="attendance" fill={settings.primaryColor} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

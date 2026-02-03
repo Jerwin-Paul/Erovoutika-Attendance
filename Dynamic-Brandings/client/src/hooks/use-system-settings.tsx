@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 export interface SystemSettings {
   schoolName: string;
@@ -26,8 +27,8 @@ const defaultSettings: SystemSettings = {
 
 interface SystemSettingsContextType {
   settings: SystemSettings;
-  updateSettings: (newSettings: Partial<SystemSettings>) => void;
-  resetSettings: () => void;
+  updateSettings: (newSettings: Partial<SystemSettings>) => Promise<void>;
+  resetSettings: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -79,12 +80,21 @@ function applyThemeColors(settings: SystemSettings) {
   const primaryHSL = hexToHSL(settings.primaryColor);
   const secondaryHSL = hexToHSL(settings.secondaryColor);
   
+  // Parse primary HSL to create derived colors
+  const primaryParts = primaryHSL.split(' ');
+  const primaryHue = primaryParts[0];
+  
   // Apply primary color
   root.style.setProperty('--primary', primaryHSL);
   root.style.setProperty('--primary-foreground', '0 0% 100%'); // White text on primary
   
-  // Apply secondary/accent color
+  // Apply secondary color (light tinted background for hover states) - uses primary hue
+  root.style.setProperty('--secondary', `${primaryHue} 30% 96%`);
+  root.style.setProperty('--secondary-foreground', primaryHSL);
+  
+  // Apply accent color
   root.style.setProperty('--accent', secondaryHSL);
+  root.style.setProperty('--accent-foreground', '0 0% 100%');
   
   // Apply ring color (for focus states)
   root.style.setProperty('--ring', primaryHSL);
@@ -135,18 +145,52 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load settings from localStorage on mount
+  // Load settings from database on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as SystemSettings;
-        setSettings({ ...defaultSettings, ...parsed });
+    const loadSettings = async () => {
+      try {
+        // First try to load from database
+        const { data, error } = await supabase
+          .from("system_settings")
+          .select("key, value");
+
+        if (!error && data && data.length > 0) {
+          // Convert array of key-value pairs to settings object
+          const dbSettings: Partial<SystemSettings> = {};
+          data.forEach((row: { key: string; value: string }) => {
+            const key = row.key as keyof SystemSettings;
+            if (key in defaultSettings) {
+              (dbSettings as any)[key] = row.value;
+            }
+          });
+          setSettings({ ...defaultSettings, ...dbSettings });
+          // Also cache in localStorage for faster subsequent loads
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...defaultSettings, ...dbSettings }));
+        } else {
+          // Fallback to localStorage if database is not available
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored) as SystemSettings;
+            setSettings({ ...defaultSettings, ...parsed });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load system settings from database:", error);
+        // Fallback to localStorage
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored) as SystemSettings;
+            setSettings({ ...defaultSettings, ...parsed });
+          }
+        } catch (localError) {
+          console.error("Failed to load system settings from localStorage:", localError);
+        }
       }
-    } catch (error) {
-      console.error("Failed to load system settings:", error);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    loadSettings();
   }, []);
 
   // Apply settings whenever they change
@@ -173,27 +217,71 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
     return () => mediaQuery.removeEventListener("change", handler);
   }, [settings.theme]);
 
-  const updateSettings = (newSettings: Partial<SystemSettings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
-      // Save to localStorage
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (error) {
-        console.error("Failed to save system settings:", error);
-      }
-      return updated;
-    });
-  };
+  const updateSettings = useCallback(async (newSettings: Partial<SystemSettings>) => {
+    const updated = { ...settings, ...newSettings };
+    
+    // Optimistically update local state
+    setSettings(updated);
+    
+    // Save to localStorage immediately for faster UX
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (error) {
+      console.error("Failed to save to localStorage:", error);
+    }
 
-  const resetSettings = () => {
+    // Save to database
+    try {
+      // Update each changed setting in the database
+      const entries = Object.entries(newSettings) as [keyof SystemSettings, string][];
+      
+      for (const [key, value] of entries) {
+        const { error } = await supabase
+          .from("system_settings")
+          .upsert(
+            { key, value: String(value), updated_at: new Date().toISOString() },
+            { onConflict: "key" }
+          );
+        
+        if (error) {
+          console.error(`Failed to save setting ${key}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to save system settings to database:", error);
+    }
+  }, [settings]);
+
+  const resetSettings = useCallback(async () => {
     setSettings(defaultSettings);
+    
+    // Clear localStorage
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      console.error("Failed to reset system settings:", error);
+      console.error("Failed to clear localStorage:", error);
     }
-  };
+
+    // Reset database settings to defaults
+    try {
+      const entries = Object.entries(defaultSettings) as [keyof SystemSettings, string][];
+      
+      for (const [key, value] of entries) {
+        const { error } = await supabase
+          .from("system_settings")
+          .upsert(
+            { key, value: String(value), updated_at: new Date().toISOString() },
+            { onConflict: "key" }
+          );
+        
+        if (error) {
+          console.error(`Failed to reset setting ${key}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to reset system settings in database:", error);
+    }
+  }, []);
 
   return (
     <SystemSettingsContext.Provider value={{ settings, updateSettings, resetSettings, isLoading }}>

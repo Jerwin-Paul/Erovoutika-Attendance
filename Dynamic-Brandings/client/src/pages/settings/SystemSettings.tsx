@@ -138,34 +138,50 @@ export default function SystemSettings() {
     form.setValue("secondaryColor", preset.secondary);
   };
 
-  const onSubmit = (data: SystemSettingsValues) => {
-    updateSettings({
-      schoolName: data.schoolName,
-      systemTitle: data.systemTitle,
-      tagline: data.tagline || "",
-      primaryColor: data.primaryColor,
-      secondaryColor: data.secondaryColor,
-      logoUrl: data.logoUrl || "",
-      faviconUrl: data.faviconUrl || "",
-      theme: data.theme,
-      fontFamily: data.fontFamily,
-    });
+  const onSubmit = async (data: SystemSettingsValues) => {
+    try {
+      await updateSettings({
+        schoolName: data.schoolName,
+        systemTitle: data.systemTitle,
+        tagline: data.tagline || "",
+        primaryColor: data.primaryColor,
+        secondaryColor: data.secondaryColor,
+        logoUrl: data.logoUrl || "",
+        faviconUrl: data.faviconUrl || "",
+        theme: data.theme,
+        fontFamily: data.fontFamily,
+      });
 
-    toast({
-      title: "Settings saved",
-      description: "Your system settings have been updated successfully.",
-    });
+      toast({
+        title: "Settings saved",
+        description: "Your system settings have been saved to the database.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleReset = () => {
-    resetSettings();
-    setSelectedPreset("DLSU Green");
-    setLogoPreview(null);
-    setFaviconPreview(null);
-    toast({
-      title: "Settings reset",
-      description: "All settings have been restored to defaults.",
-    });
+  const handleReset = async () => {
+    try {
+      await resetSettings();
+      setSelectedPreset("DLSU Green");
+      setLogoPreview(null);
+      setFaviconPreview(null);
+      toast({
+        title: "Settings reset",
+        description: "All settings have been restored to defaults.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reset settings. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const watchPrimaryColor = form.watch("primaryColor");
