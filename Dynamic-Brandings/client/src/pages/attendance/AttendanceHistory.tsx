@@ -392,14 +392,14 @@ export default function AttendanceHistory() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 sm:items-center">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium">Filters:</span>
             </div>
             
             <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="All Subjects" />
               </SelectTrigger>
               <SelectContent>
@@ -413,7 +413,7 @@ export default function AttendanceHistory() {
             </Select>
 
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Select Month" />
               </SelectTrigger>
               <SelectContent>
@@ -426,7 +426,7 @@ export default function AttendanceHistory() {
             </Select>
 
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -438,7 +438,7 @@ export default function AttendanceHistory() {
               </SelectContent>
             </Select>
 
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search by student name..." 
@@ -484,7 +484,7 @@ export default function AttendanceHistory() {
                         <TableRow>
                           <TableHead>Student</TableHead>
                           <TableHead>Subject</TableHead>
-                          <TableHead>Time In</TableHead>
+                          <TableHead className="whitespace-nowrap">Time In</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Remarks</TableHead>
                           <TableHead className="w-[80px]">Actions</TableHead>
@@ -499,7 +499,7 @@ export default function AttendanceHistory() {
                             <TableCell className="text-muted-foreground">
                               {record.subjectName}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="whitespace-nowrap">
                               {formatTimeLocal(record.timeIn)}
                             </TableCell>
                             <TableCell>
