@@ -268,43 +268,43 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold font-display text-gray-900">Reports</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold font-display text-gray-900">Reports</h1>
+        <p className="text-muted-foreground text-sm sm:text-base mt-1">
           Generate attendance reports and statistics
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-[400px_1fr] gap-6">
+      <div className="grid lg:grid-cols-[350px_1fr] gap-4 sm:gap-6">
         {/* Report Configuration */}
         <Card className="shadow-sm h-fit">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
               Report Configuration
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Select the type of report and configure parameters
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
             {/* Report Type */}
             <div className="space-y-2">
-              <Label>Report Type</Label>
+              <Label className="text-sm">Report Type</Label>
               <Tabs value={reportType} onValueChange={(v) => { setReportType(v as ReportType); setShowReport(false); }}>
                 <TabsList className="grid w-full grid-cols-1 h-auto">
-                  <TabsTrigger value="subject-monthly" className="flex items-center gap-2 py-3">
-                    <Calendar className="w-4 h-4" />
+                  <TabsTrigger value="subject-monthly" className="flex items-center gap-2 py-2 sm:py-3 text-xs sm:text-sm">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                     Subject Monthly Report
                   </TabsTrigger>
-                  <TabsTrigger value="subject-semester" className="flex items-center gap-2 py-3">
-                    <BarChart3 className="w-4 h-4" />
+                  <TabsTrigger value="subject-semester" className="flex items-center gap-2 py-2 sm:py-3 text-xs sm:text-sm">
+                    <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
                     Subject Semester Report
                   </TabsTrigger>
-                  <TabsTrigger value="student-subject" className="flex items-center gap-2 py-3">
-                    <Users className="w-4 h-4" />
+                  <TabsTrigger value="student-subject" className="flex items-center gap-2 py-2 sm:py-3 text-xs sm:text-sm">
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                     Student Report
                   </TabsTrigger>
                 </TabsList>
@@ -313,9 +313,9 @@ export default function Reports() {
 
             {/* Subject Selection */}
             <div className="space-y-2">
-              <Label>Subject</Label>
+              <Label className="text-sm">Subject</Label>
               <Select value={selectedSubjectId} onValueChange={(v) => { setSelectedSubjectId(v); setSelectedStudentId(""); setShowReport(false); }}>
-                <SelectTrigger>
+                <SelectTrigger className="text-sm">
                   <SelectValue placeholder="Select a subject" />
                 </SelectTrigger>
                 <SelectContent>
@@ -331,9 +331,9 @@ export default function Reports() {
             {/* Month Selection (for monthly report) */}
             {reportType === 'subject-monthly' && (
               <div className="space-y-2">
-                <Label>Month</Label>
+                <Label className="text-sm">Month</Label>
                 <Select value={selectedMonth} onValueChange={(v) => { setSelectedMonth(v); setShowReport(false); }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm">
                     <SelectValue placeholder="Select month" />
                   </SelectTrigger>
                   <SelectContent>
@@ -350,9 +350,9 @@ export default function Reports() {
             {/* Student Selection (for student report) */}
             {reportType === 'student-subject' && selectedSubjectId && (
               <div className="space-y-2">
-                <Label>Student</Label>
+                <Label className="text-sm">Student</Label>
                 <Select value={selectedStudentId} onValueChange={(v) => { setSelectedStudentId(v); setShowReport(false); }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm">
                     <SelectValue placeholder="Select a student" />
                   </SelectTrigger>
                   <SelectContent>
@@ -368,7 +368,7 @@ export default function Reports() {
 
             {/* Generate Button */}
             <Button 
-              className="w-full" 
+              className="w-full text-sm" 
               size="lg"
               onClick={handleGenerateReport}
               disabled={!canGenerate() || isGenerating}
@@ -386,40 +386,40 @@ export default function Reports() {
         </Card>
 
         {/* Report Preview */}
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-6">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
                 Report Preview
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Preview and download your generated report
               </CardDescription>
             </div>
             {showReport && (
-              <Button onClick={handlePrint} variant="outline">
+              <Button onClick={handlePrint} variant="outline" size="sm" className="w-full sm:w-auto">
                 <Printer className="w-4 h-4 mr-2" />
                 Print / Save PDF
               </Button>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {!showReport ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <FileText className="w-16 h-16 mb-4 opacity-50" />
-                <p>Configure your report and click "Generate Report" to preview</p>
+              <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-muted-foreground">
+                <FileText className="w-12 h-12 sm:w-16 sm:h-16 mb-4 opacity-50" />
+                <p className="text-center text-sm sm:text-base">Configure your report and click "Generate Report" to preview</p>
               </div>
             ) : (
-              <div ref={reportRef} className="space-y-6">
+              <div ref={reportRef} className="space-y-4 sm:space-y-6">
                 {/* Report Header */}
-                <div className="header border-b-2 border-primary pb-4">
-                  <h1 className="text-2xl font-bold text-primary">
+                <div className="header border-b-2 border-primary pb-3 sm:pb-4">
+                  <h1 className="text-lg sm:text-2xl font-bold text-primary">
                     {reportType === 'subject-monthly' && 'Monthly Attendance Report'}
                     {reportType === 'subject-semester' && 'Semester Attendance Report'}
                     {reportType === 'student-subject' && 'Student Attendance Report'}
                   </h1>
-                  <div className="meta text-sm text-muted-foreground mt-2 space-y-1">
+                  <div className="meta text-xs sm:text-sm text-muted-foreground mt-2 space-y-0.5 sm:space-y-1">
                     <p><strong>Subject:</strong> {selectedSubject?.code} - {selectedSubject?.name}</p>
                     {reportType === 'subject-monthly' && (
                       <p><strong>Period:</strong> {monthOptions.find(m => m.value === selectedMonth)?.label}</p>
@@ -437,33 +437,33 @@ export default function Reports() {
 
                 {/* Statistics Summary */}
                 <div>
-                  <h2 className="text-lg font-semibold mb-3">Summary Statistics</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div className="stat-box border rounded-lg p-4 text-center">
-                      <p className="stat-value text-2xl font-bold">{stats.total}</p>
-                      <p className="stat-label text-sm text-muted-foreground">Total Records</p>
+                  <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Summary Statistics</h2>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
+                    <div className="stat-box border rounded-lg p-2 sm:p-4 text-center">
+                      <p className="stat-value text-lg sm:text-2xl font-bold">{stats.total}</p>
+                      <p className="stat-label text-[10px] sm:text-sm text-muted-foreground">Total</p>
                     </div>
-                    <div className="stat-box border rounded-lg p-4 text-center">
-                      <p className="stat-value text-2xl font-bold text-green-600">{stats.present}</p>
-                      <p className="stat-label text-sm text-muted-foreground">Present</p>
+                    <div className="stat-box border rounded-lg p-2 sm:p-4 text-center">
+                      <p className="stat-value text-lg sm:text-2xl font-bold text-green-600">{stats.present}</p>
+                      <p className="stat-label text-[10px] sm:text-sm text-muted-foreground">Present</p>
                     </div>
-                    <div className="stat-box border rounded-lg p-4 text-center">
-                      <p className="stat-value text-2xl font-bold text-yellow-600">{stats.late}</p>
-                      <p className="stat-label text-sm text-muted-foreground">Late</p>
+                    <div className="stat-box border rounded-lg p-2 sm:p-4 text-center">
+                      <p className="stat-value text-lg sm:text-2xl font-bold text-yellow-600">{stats.late}</p>
+                      <p className="stat-label text-[10px] sm:text-sm text-muted-foreground">Late</p>
                     </div>
-                    <div className="stat-box border rounded-lg p-4 text-center">
-                      <p className="stat-value text-2xl font-bold text-red-600">{stats.absent}</p>
-                      <p className="stat-label text-sm text-muted-foreground">Absent</p>
+                    <div className="stat-box border rounded-lg p-2 sm:p-4 text-center">
+                      <p className="stat-value text-lg sm:text-2xl font-bold text-red-600">{stats.absent}</p>
+                      <p className="stat-label text-[10px] sm:text-sm text-muted-foreground">Absent</p>
                     </div>
-                    <div className="stat-box border rounded-lg p-4 text-center">
-                      <p className="stat-value text-2xl font-bold text-blue-600">{stats.excused}</p>
-                      <p className="stat-label text-sm text-muted-foreground">Excused</p>
+                    <div className="stat-box border rounded-lg p-2 sm:p-4 text-center col-span-3 sm:col-span-1">
+                      <p className="stat-value text-lg sm:text-2xl font-bold text-blue-600">{stats.excused}</p>
+                      <p className="stat-label text-[10px] sm:text-sm text-muted-foreground">Excused</p>
                     </div>
                   </div>
-                  <div className="mt-4 p-4 bg-primary/5 rounded-lg">
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-primary/5 rounded-lg">
                     <p className="text-center">
-                      <span className="text-2xl font-bold text-primary">{stats.attendanceRate}%</span>
-                      <span className="text-muted-foreground ml-2">Attendance Rate</span>
+                      <span className="text-xl sm:text-2xl font-bold text-primary">{stats.attendanceRate}%</span>
+                      <span className="text-muted-foreground ml-2 text-xs sm:text-base">Attendance Rate</span>
                     </p>
                   </div>
                 </div>
@@ -471,17 +471,17 @@ export default function Reports() {
                 {/* Student-wise Breakdown (for subject reports) */}
                 {(reportType === 'subject-monthly' || reportType === 'subject-semester') && (
                   <div>
-                    <h2 className="text-lg font-semibold mb-3">Student-wise Breakdown</h2>
-                    <div className="rounded-md border">
+                    <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Student-wise Breakdown</h2>
+                    <div className="rounded-md border overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Student Name</TableHead>
-                            <TableHead className="text-center">Present</TableHead>
-                            <TableHead className="text-center">Late</TableHead>
-                            <TableHead className="text-center">Absent</TableHead>
-                            <TableHead className="text-center">Excused</TableHead>
-                            <TableHead className="text-center">Rate</TableHead>
+                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Student Name</TableHead>
+                            <TableHead className="text-center text-xs sm:text-sm px-1 sm:px-4">Present</TableHead>
+                            <TableHead className="text-center text-xs sm:text-sm px-1 sm:px-4">Late</TableHead>
+                            <TableHead className="text-center text-xs sm:text-sm px-1 sm:px-4">Absent</TableHead>
+                            <TableHead className="text-center text-xs sm:text-sm px-1 sm:px-4 hidden sm:table-cell">Excused</TableHead>
+                            <TableHead className="text-center text-xs sm:text-sm px-1 sm:px-4">Rate</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -491,18 +491,18 @@ export default function Reports() {
                               : '0';
                             return (
                               <TableRow key={id}>
-                                <TableCell className="font-medium">{data.name}</TableCell>
-                                <TableCell className="text-center text-green-600">{data.stats.present}</TableCell>
-                                <TableCell className="text-center text-yellow-600">{data.stats.late}</TableCell>
-                                <TableCell className="text-center text-red-600">{data.stats.absent}</TableCell>
-                                <TableCell className="text-center text-blue-600">{data.stats.excused}</TableCell>
-                                <TableCell className="text-center font-medium">{rate}%</TableCell>
+                                <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{data.name}</TableCell>
+                                <TableCell className="text-center text-green-600 text-xs sm:text-sm">{data.stats.present}</TableCell>
+                                <TableCell className="text-center text-yellow-600 text-xs sm:text-sm">{data.stats.late}</TableCell>
+                                <TableCell className="text-center text-red-600 text-xs sm:text-sm">{data.stats.absent}</TableCell>
+                                <TableCell className="text-center text-blue-600 text-xs sm:text-sm hidden sm:table-cell">{data.stats.excused}</TableCell>
+                                <TableCell className="text-center font-medium text-xs sm:text-sm">{rate}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {Object.keys(recordsByStudent).length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={6} className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
                                 No attendance records found for this period
                               </TableCell>
                             </TableRow>
@@ -516,39 +516,39 @@ export default function Reports() {
                 {/* Detailed Records (for student report) */}
                 {reportType === 'student-subject' && (
                   <div>
-                    <h2 className="text-lg font-semibold mb-3">Detailed Attendance Records</h2>
-                    <div className="rounded-md border">
+                    <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Detailed Attendance Records</h2>
+                    <div className="rounded-md border overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Day</TableHead>
-                            <TableHead>Time In</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Remarks</TableHead>
+                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Date</TableHead>
+                            <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Day</TableHead>
+                            <TableHead className="text-xs sm:text-sm whitespace-nowrap">Time In</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                            <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Remarks</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredRecords.map((record) => (
                             <TableRow key={record.id}>
-                              <TableCell>{format(parseISO(record.date), 'MMM d, yyyy')}</TableCell>
-                              <TableCell>{format(parseISO(record.date), 'EEEE')}</TableCell>
-                              <TableCell>
+                              <TableCell className="text-xs sm:text-sm whitespace-nowrap">{format(parseISO(record.date), 'MMM d, yyyy')}</TableCell>
+                              <TableCell className="text-xs sm:text-sm hidden sm:table-cell">{format(parseISO(record.date), 'EEEE')}</TableCell>
+                              <TableCell className="text-xs sm:text-sm whitespace-nowrap">
                                 {record.timeIn 
                                   ? (typeof record.timeIn === 'string' 
                                       ? format(new Date(record.timeIn.replace('Z', '')), 'h:mm a')
                                       : format(record.timeIn, 'h:mm a'))
                                   : '-'}
                               </TableCell>
-                              <TableCell>{getStatusBadge(record.status)}</TableCell>
-                              <TableCell className="text-muted-foreground">
+                              <TableCell className="text-xs sm:text-sm">{getStatusBadge(record.status)}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs sm:text-sm hidden sm:table-cell">
                                 {record.remarks || '-'}
                               </TableCell>
                             </TableRow>
                           ))}
                           {filteredRecords.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
                                 No attendance records found for this student
                               </TableCell>
                             </TableRow>

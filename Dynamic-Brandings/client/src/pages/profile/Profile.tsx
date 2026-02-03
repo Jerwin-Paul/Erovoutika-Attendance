@@ -7,7 +7,7 @@ import { Link } from "wouter";
 import {
     User,
     Camera,
-    Mail,
+    IdCard,
     Shield,
     Calendar,
     Loader2,
@@ -244,7 +244,7 @@ export default function Profile() {
                         {/* ID Number - Read Only */}
                         <div className="flex items-start gap-4">
                             <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                                <Mail className="h-5 w-5 text-secondary-foreground" />
+                                <IdCard className="h-5 w-5 text-secondary-foreground" />
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">ID Number</p>
