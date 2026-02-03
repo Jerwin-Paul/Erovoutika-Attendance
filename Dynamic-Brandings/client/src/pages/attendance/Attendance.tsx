@@ -793,21 +793,21 @@ export default function Attendance() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-display text-gray-900">Take Attendance</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold font-display text-gray-900">Take Attendance</h1>
+        <p className="text-muted-foreground text-sm sm:text-base mt-1">
           Record and manage class attendance
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-[350px_1fr] gap-6">
+      <div className="grid lg:grid-cols-[350px_1fr] gap-4 lg:gap-6">
         {/* Left Panel - QR Code & Controls */}
-        <Card className="shadow-sm">
-          <CardContent className="p-6">
+        <Card className="shadow-sm w-full">
+          <CardContent className="p-4 sm:p-6">
             {/* Subject Selector */}
             <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId} disabled={sessionState !== 'inactive'}>
-              <SelectTrigger className={`w-full mb-6 ${sessionState !== 'inactive' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <SelectTrigger className={`w-full mb-4 sm:mb-6 ${sessionState !== 'inactive' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <SelectValue placeholder="Select a subject" />
               </SelectTrigger>
               <SelectContent>
@@ -826,17 +826,17 @@ export default function Attendance() {
             <QRCodeDisplay />
 
             {/* Date & Time */}
-            <div className="text-center mt-4 mb-6">
-              <p className="text-lg font-medium text-gray-900">
+            <div className="text-center mt-3 sm:mt-4 mb-4 sm:mb-6">
+              <p className="text-base sm:text-lg font-medium text-gray-900">
                 {format(currentTime, 'MMMM d, yyyy')}
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {format(currentTime, 'h:mm a')}
               </p>
             </div>
 
             {/* Control Buttons */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {sessionState === 'inactive' ? (
                 // Show Resume (yellow) if session was ended, otherwise Show Start (green)
                 sessionEnded ? (
@@ -959,10 +959,10 @@ export default function Attendance() {
         </Card>
 
         {/* Right Panel - Student List */}
-        <Card className="shadow-sm">
-          <CardContent className="p-6">
+        <Card className="shadow-sm w-full overflow-hidden">
+          <CardContent className="p-3 sm:p-6">
             {/* Search & Edit */}
-            <div className="flex gap-4 mb-4">
+            <div className="flex gap-2 sm:gap-4 mb-3 sm:mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
@@ -984,100 +984,108 @@ export default function Attendance() {
             </div>
 
             {/* Attendance Table */}
-            <div className="rounded-md border max-h-[500px] overflow-y-auto">
+            <div className="rounded-md border max-h-[400px] sm:max-h-[500px] overflow-auto">
               <Table>
-                <TableHeader className="sticky top-0 bg-white">
+                <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow>
-                    <TableHead className="w-[250px]">Name</TableHead>
-                    <TableHead className="w-[100px]">Time-in</TableHead>
-                    <TableHead className="text-center w-[80px]">Present</TableHead>
-                    <TableHead className="text-center w-[80px]">Late</TableHead>
-                    <TableHead className="text-center w-[80px]">Absent</TableHead>
-                    <TableHead className="text-center w-[80px]">Excused</TableHead>
+                    <TableHead className="text-xs sm:text-sm whitespace-nowrap">Name</TableHead>
+                    <TableHead className="text-center w-[60px] sm:w-[100px] text-xs sm:text-sm whitespace-nowrap">Time-in</TableHead>
+                    <TableHead className="text-center w-[50px] sm:w-[80px] text-xs sm:text-sm px-1 sm:px-4">Present</TableHead>
+                    <TableHead className="text-center w-[50px] sm:w-[80px] text-xs sm:text-sm px-1 sm:px-4">Late</TableHead>
+                    <TableHead className="text-center w-[50px] sm:w-[80px] text-xs sm:text-sm px-1 sm:px-4">Absent</TableHead>
+                    <TableHead className="text-center w-[50px] sm:w-[80px] text-xs sm:text-sm px-1 sm:px-4">Excused</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRecords.length > 0 ? (
                     filteredRecords.map((record) => (
                       <TableRow key={record.studentId}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gray-200 text-gray-600 text-xs">
+                        <TableCell className="p-2 sm:p-4">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
+                              <AvatarFallback className="bg-gray-200 text-gray-600 text-[10px] sm:text-xs">
                                 {record.studentName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{record.studentName}</span>
+                            <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{record.studentName}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-center text-muted-foreground text-xs sm:text-sm p-2 sm:p-4">
                           {record.timeIn || '-'}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <button
-                            onClick={() => handleStatusChange(record.studentId, 'present')}
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              record.status === 'present' 
-                                ? 'bg-green-500 border-green-500' 
-                                : 'border-gray-300 hover:border-green-400'
-                            } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!isEditing}
-                          >
-                            {record.status === 'present' && (
-                              <CheckCircle2 className="w-4 h-4 text-white" />
-                            )}
-                          </button>
+                        <TableCell className="p-1 sm:p-4">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleStatusChange(record.studentId, 'present')}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                record.status === 'present' 
+                                  ? 'bg-green-500 border-green-500' 
+                                  : 'border-gray-300 hover:border-green-400'
+                              } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={!isEditing}
+                            >
+                              {record.status === 'present' && (
+                                <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                              )}
+                            </button>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <button
-                            onClick={() => handleStatusChange(record.studentId, 'late')}
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              record.status === 'late' 
-                                ? 'bg-yellow-500 border-yellow-500' 
-                                : 'border-gray-300 hover:border-yellow-400'
-                            } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!isEditing}
-                          >
-                            {record.status === 'late' && (
-                              <div className="w-3 h-3 rounded-full bg-white" />
-                            )}
-                          </button>
+                        <TableCell className="p-1 sm:p-4">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleStatusChange(record.studentId, 'late')}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                record.status === 'late' 
+                                  ? 'bg-yellow-500 border-yellow-500' 
+                                  : 'border-gray-300 hover:border-yellow-400'
+                              } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={!isEditing}
+                            >
+                              {record.status === 'late' && (
+                                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-white" />
+                              )}
+                            </button>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <button
-                            onClick={() => handleStatusChange(record.studentId, 'absent')}
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              record.status === 'absent' 
-                                ? 'bg-red-500 border-red-500' 
-                                : 'border-gray-300 hover:border-red-400'
-                            } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!isEditing}
-                          >
-                            {record.status === 'absent' && (
-                              <div className="w-3 h-3 rounded-full bg-white" />
-                            )}
-                          </button>
+                        <TableCell className="p-1 sm:p-4">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleStatusChange(record.studentId, 'absent')}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                record.status === 'absent' 
+                                  ? 'bg-red-500 border-red-500' 
+                                  : 'border-gray-300 hover:border-red-400'
+                              } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={!isEditing}
+                            >
+                              {record.status === 'absent' && (
+                                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-white" />
+                              )}
+                            </button>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <button
-                            onClick={() => handleStatusChange(record.studentId, 'excused')}
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              record.status === 'excused' 
-                                ? 'bg-blue-500 border-blue-500' 
-                                : 'border-gray-300 hover:border-blue-400'
-                            } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!isEditing}
-                          >
-                            {record.status === 'excused' && (
-                              <div className="w-3 h-3 rounded-full bg-white" />
-                            )}
-                          </button>
+                        <TableCell className="p-1 sm:p-4">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleStatusChange(record.studentId, 'excused')}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                record.status === 'excused' 
+                                  ? 'bg-blue-500 border-blue-500' 
+                                  : 'border-gray-300 hover:border-blue-400'
+                              } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={!isEditing}
+                            >
+                              {record.status === 'excused' && (
+                                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-white" />
+                              )}
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
                         {selectedSubjectId 
                           ? "No students enrolled in this subject" 
                           : "Select a subject to view students"}
@@ -1089,31 +1097,31 @@ export default function Attendance() {
             </div>
 
             {/* Stats Footer */}
-            <div className="flex justify-between items-center mt-4 pt-4 border-t bg-gray-50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-600" />
-                <span className="font-medium">Students</span>
-                <span className="text-gray-600">{stats.total}</span>
+            <div className="flex flex-wrap justify-center sm:justify-between items-center gap-2 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t bg-gray-50 -mx-3 sm:-mx-6 -mb-3 sm:-mb-6 px-3 sm:px-6 py-3 sm:py-4 rounded-b-lg">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
+                <span className="font-medium text-xs sm:text-sm">Students</span>
+                <span className="text-gray-600 text-xs sm:text-sm">{stats.total}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="font-medium">Present</span>
-                <span className="text-gray-600">{stats.present}</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500" />
+                <span className="font-medium text-xs sm:text-sm">Present</span>
+                <span className="text-gray-600 text-xs sm:text-sm">{stats.present}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                <span className="font-medium">Late</span>
-                <span className="text-gray-600">{stats.late}</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-500" />
+                <span className="font-medium text-xs sm:text-sm">Late</span>
+                <span className="text-gray-600 text-xs sm:text-sm">{stats.late}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <span className="font-medium">Absent</span>
-                <span className="text-gray-600">{stats.absent}</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500" />
+                <span className="font-medium text-xs sm:text-sm">Absent</span>
+                <span className="text-gray-600 text-xs sm:text-sm">{stats.absent}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span className="font-medium">Excused</span>
-                <span className="text-gray-600">{stats.excused}</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-500" />
+                <span className="font-medium text-xs sm:text-sm">Excused</span>
+                <span className="text-gray-600 text-xs sm:text-sm">{stats.excused}</span>
               </div>
             </div>
           </CardContent>
