@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAttendance } from "@/hooks/use-attendance";
-import { useSubjects } from "@/hooks/use-subjects";
+import { useSubjects, useStudentSubjects } from "@/hooks/use-subjects";
 import { useTeacherSchedules } from "@/hooks/use-schedules";
 import { useSystemSettings } from "@/hooks/use-system-settings";
 import { useQuery } from "@tanstack/react-query";
@@ -64,8 +64,9 @@ function StatsCard({ title, value, icon: Icon, description, trend }: any) {
 }
 
 function StudentDashboard() {
-  const { data: attendance } = useAttendance();
-  const { data: subjects } = useSubjects();
+  const { user } = useAuth();
+  const { data: attendance } = useAttendance({ studentId: user?.id });
+  const { data: subjects } = useStudentSubjects(user?.id);
 
   // Calculate simple stats (case-insensitive status comparison)
   const totalClasses = attendance?.length || 0;
@@ -73,7 +74,7 @@ function StudentDashboard() {
   const lateCount = attendance?.filter(a => a.status?.toLowerCase() === 'late').length || 0;
   const absentCount = attendance?.filter(a => a.status?.toLowerCase() === 'absent').length || 0;
   const excusedCount = attendance?.filter(a => a.status?.toLowerCase() === 'excused').length || 0;
-  const attendanceRate = totalClasses ? Math.round(((presentCount + lateCount) / totalClasses) * 100) : 100;
+  const attendanceRate = totalClasses > 0 ? ((presentCount + lateCount) / totalClasses * 100).toFixed(1) : '0.0';
 
   const chartData = [
     { name: 'Present', value: presentCount, color: '#22c55e' },
@@ -90,7 +91,7 @@ function StudentDashboard() {
           value={`${attendanceRate}%`} 
           icon={TrendingUp} 
           description="Overall participation"
-          trend={attendanceRate >= 85 ? "Excellent" : "Needs Attention"}
+          trend={parseFloat(attendanceRate) >= 85 ? "Excellent" : "Needs Attention"}
         />
         <StatsCard 
           title="Active Subjects" 

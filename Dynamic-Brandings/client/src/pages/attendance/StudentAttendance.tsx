@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useSubjects } from "@/hooks/use-subjects";
+import { useStudentSubjects } from "@/hooks/use-subjects";
 import { useAttendance } from "@/hooks/use-attendance";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -66,7 +66,7 @@ type ScanResultType = 'present' | 'late' | 'error' | 'already' | null;
 
 export default function StudentAttendance() {
   const { user } = useAuth();
-  const { data: subjects, isLoading: subjectsLoading } = useSubjects();
+  const { data: subjects, isLoading: subjectsLoading } = useStudentSubjects(user?.id);
   const { toast } = useToast();
   
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("all");
@@ -502,7 +502,7 @@ export default function StudentAttendance() {
       </div>
 
       {/* Overall Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -562,6 +562,20 @@ export default function StudentAttendance() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-600">{overallStats.excused}</p>
+                <p className="text-xs text-muted-foreground">Excused</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <span className="text-lg font-bold text-primary">%</span>
               </div>
@@ -596,10 +610,11 @@ export default function StudentAttendance() {
                       {stat.attendanceRate}%
                     </Badge>
                   </div>
-                  <div className="flex gap-3 text-sm">
+                  <div className="flex gap-3 text-sm flex-wrap">
                     <span className="text-green-600">{stat.present} Present</span>
                     <span className="text-yellow-600">{stat.late} Late</span>
                     <span className="text-red-600">{stat.absent} Absent</span>
+                    <span className="text-blue-600">{stat.excused} Excused</span>
                   </div>
                 </div>
               ))}
