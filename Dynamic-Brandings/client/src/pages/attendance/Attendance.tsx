@@ -360,12 +360,10 @@ export default function Attendance() {
   const handleQRScanned = useCallback((studentId: number, scannedToken: string) => {
     // Validate the token matches current valid token
     if (scannedToken !== currentQRToken) {
-      console.log("Invalid or expired QR code!");
       return false;
     }
     
     if (sessionState !== 'active') {
-      console.log("Session is not active!");
       return false;
     }
     

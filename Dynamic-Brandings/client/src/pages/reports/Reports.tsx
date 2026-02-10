@@ -89,7 +89,7 @@ export default function Reports() {
       const { data, error } = await supabase
         .from("attendance")
         .select(`
-          *,
+          id, student_id, subject_id, date, status, time_in, remarks,
           student:users!student_id(full_name),
           subject:subjects!subject_id(name)
         `)

@@ -165,12 +165,9 @@ export default function AttendanceHistory() {
     queryFn: async () => {
 
       
-      // TEMP: Get all attendance records to test
       const { data, error } = await supabase
         .from("attendance")
-        .select("*");
-      
-      console.log('Raw attendance data count:', data?.length, 'Error:', error);
+        .select("id, student_id, subject_id, date, status, time_in, remarks");
       
       if (error) throw new Error('Failed to fetch attendance records');
       
@@ -186,15 +183,13 @@ export default function AttendanceHistory() {
         .select("id, full_name")
         .in("id", studentIds);
       
-      console.log('Students data:', students, 'Error:', studentsError);
-      
       // Fetch subject names
       const { data: subjects, error: subjectsError } = await supabase
         .from("subjects")
         .select("id, name")
         .in("id", subjectIdsFromAttendance);
       
-      console.log('Subjects data:', subjects, 'Error:', subjectsError);
+
       
       // Create lookup maps
       const studentMap = new Map(students?.map(s => [s.id, s.full_name]) || []);
@@ -211,8 +206,6 @@ export default function AttendanceHistory() {
         studentName: studentMap.get(r.student_id) || "Unknown",
         subjectName: subjectMap.get(r.subject_id) || "Unknown",
       }));
-      
-      console.log('Final mapped data:', mappedData);
       
       return mappedData;
     },

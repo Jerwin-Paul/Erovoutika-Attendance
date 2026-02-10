@@ -35,14 +35,10 @@ export function useAttendance(filters?: { subjectId?: number; studentId?: number
     queryKey,
     refetchInterval: options?.refetchInterval,
     queryFn: async () => {
-      console.log('Fetching attendance with filters:', filters);
-      
-      // Use simpler query without explicit foreign key syntax
-      // Supabase will automatically detect the relationships
       let query = supabase
         .from("attendance")
         .select(`
-          *,
+          id, student_id, subject_id, date, status, time_in, remarks,
           student:users!student_id(full_name),
           subject:subjects!subject_id(name)
         `);
@@ -51,7 +47,6 @@ export function useAttendance(filters?: { subjectId?: number; studentId?: number
         query = query.eq("subject_id", filters.subjectId);
       }
       if (filters?.studentId) {
-        console.log('Filtering by student_id:', filters.studentId, 'type:', typeof filters.studentId);
         query = query.eq("student_id", filters.studentId);
       }
       if (filters?.date) {
@@ -59,9 +54,7 @@ export function useAttendance(filters?: { subjectId?: number; studentId?: number
       }
       
       const { data, error } = await query;
-      console.log('Attendance query result:', { data, error });
       if (error) {
-        console.error('Supabase error:', error);
         throw new Error("Failed to fetch attendance: " + error.message);
       }
       return (data || []).map(mapDbRowToAttendance);
@@ -90,7 +83,7 @@ export function useMarkAttendance() {
         .from("attendance")
         .insert(dbData)
         .select(`
-          *,
+          id, student_id, subject_id, date, status, time_in, remarks,
           student:users!student_id(full_name),
           subject:subjects!subject_id(name)
         `)

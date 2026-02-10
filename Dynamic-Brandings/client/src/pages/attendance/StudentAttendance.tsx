@@ -174,8 +174,7 @@ export default function StudentAttendance() {
   const processQRCode = useCallback(async (qrData: string) => {
     if (isProcessing) return;
     
-    console.log('Raw QR data received:', qrData);
-    console.log('QR data length:', qrData?.length);
+
     
     let token: string;
     let subjectId: string;
@@ -186,7 +185,7 @@ export default function StudentAttendance() {
         const parsedData = JSON.parse(qrData);
         token = parsedData.token;
         subjectId = parsedData.subjectId;
-        console.log('Parsed JSON QR data:', parsedData);
+
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
         return; // Silently ignore invalid JSON
@@ -198,7 +197,7 @@ export default function StudentAttendance() {
         const url = new URL(qrData);
         token = url.searchParams.get('token') || '';
         subjectId = url.searchParams.get('subjectId') || '';
-        console.log('Parsed URL QR data - token:', token, 'subjectId:', subjectId);
+
       } catch (urlError) {
         console.error('URL parse error:', urlError);
         return; // Silently ignore invalid URL
@@ -206,12 +205,12 @@ export default function StudentAttendance() {
     }
     // Invalid format
     else {
-      console.log('Invalid QR format, ignoring...');
+
       return;
     }
     
     if (!token || !subjectId) {
-      console.log('Missing token or subjectId');
+
       return;
     }
     
@@ -230,7 +229,7 @@ export default function StudentAttendance() {
         throw new Error("Only students can scan attendance QR codes");
       }
 
-      console.log('Processing scan for user:', user.id, 'token:', token, 'subjectId:', subjectId);
+
 
       // Step 1: Validate QR code against database
       const { data: qrRecord, error: qrError } = await supabase
@@ -241,14 +240,13 @@ export default function StudentAttendance() {
         .single();
 
       if (qrError || !qrRecord) {
-        console.log('QR validation failed:', qrError);
         throw new Error("Invalid or expired QR code. Please ask your teacher to regenerate.");
       }
 
       const validSubjectId = qrRecord.subject_id;
       const isLate = token.includes('_LATE');
 
-      console.log('QR code validated, subjectId:', validSubjectId, 'isLate:', isLate);
+
 
       // Step 2: Check if student is enrolled in this subject
       const { data: enrollment, error: enrollError } = await supabase
@@ -259,7 +257,6 @@ export default function StudentAttendance() {
         .single();
 
       if (enrollError || !enrollment) {
-        console.log('Enrollment check failed:', enrollError);
         throw new Error("You are not enrolled in this subject");
       }
 
@@ -344,7 +341,7 @@ export default function StudentAttendance() {
         throw new Error("Failed to record attendance. Please try again.");
       }
 
-      console.log('Attendance recorded successfully:', newRecord);
+
 
       setScanResult(status);
       setScanMessage(`Attendance recorded as ${status}`);
@@ -391,7 +388,6 @@ export default function StudentAttendance() {
             disableFlip: false
           },
           (decodedText) => {
-            console.log("Scanned QR:", decodedText);
             processQRCode(decodedText);
           },
           () => {

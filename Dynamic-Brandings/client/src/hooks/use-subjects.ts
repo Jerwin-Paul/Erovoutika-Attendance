@@ -20,7 +20,7 @@ function mapDbRowToUser(row: any): User {
     id: row.id,
     idNumber: row.id_number,
     email: row.email,
-    password: row.password,
+    password: "",
     fullName: row.full_name,
     role: row.role,
     profilePicture: row.profile_picture,
@@ -108,7 +108,7 @@ export function useSubjectStudents(subjectId: number) {
       const studentIds = enrollments.map(e => e.student_id);
       const { data: students, error: studentsError } = await supabase
         .from("users")
-        .select("*")
+        .select("id, id_number, email, full_name, role, profile_picture, created_at")
         .in("id", studentIds);
       
       if (studentsError) throw new Error("Failed to fetch students");
