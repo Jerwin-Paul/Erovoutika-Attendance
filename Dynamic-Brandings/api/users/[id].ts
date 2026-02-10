@@ -57,7 +57,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: data.id,
         idNumber: data.id_number,
         email: data.email,
-        password: data.password,
         fullName: data.full_name,
         role: data.role,
         profilePicture: data.profile_picture,
@@ -148,12 +147,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Map response to camelCase
+      // Map response to camelCase (strip password)
       const user = {
         id: updatedUser.id,
         idNumber: updatedUser.id_number,
         email: updatedUser.email,
-        password: updatedUser.password,
         fullName: updatedUser.full_name,
         role: updatedUser.role,
         profilePicture: updatedUser.profile_picture,

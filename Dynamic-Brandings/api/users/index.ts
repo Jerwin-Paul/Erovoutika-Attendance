@@ -45,12 +45,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await query;
       if (error) throw error;
       
-      // Map snake_case to camelCase
+      // Map snake_case to camelCase (strip password)
       const users = data?.map((u: any) => ({
         id: u.id,
         idNumber: u.id_number,
         email: u.email,
-        password: u.password,
         fullName: u.full_name,
         role: u.role,
         profilePicture: u.profile_picture,
@@ -109,12 +108,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Map response to camelCase
+      // Map response to camelCase (strip password)
       const user = {
         id: newUser.id,
         idNumber: newUser.id_number,
         email: newUser.email,
-        password: newUser.password,
         fullName: newUser.full_name,
         role: newUser.role,
         profilePicture: newUser.profile_picture,
