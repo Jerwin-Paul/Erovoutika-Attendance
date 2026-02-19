@@ -15,7 +15,8 @@ import {
   ChevronDown,
   History,
   FileText,
-  UserPlus
+  UserPlus,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,9 @@ export function Layout({ children }: LayoutProps) {
   useEffect(() => {
     if (location.startsWith('/attendance')) {
       setExpandedMenus(prev => prev.includes('attendance') ? prev : [...prev, 'attendance']);
+    }
+    if (location.startsWith('/enrollments')) {
+      setExpandedMenus(prev => prev.includes('enrollments') ? prev : [...prev, 'enrollments']);
     }
   }, [location]);
 
@@ -171,7 +175,17 @@ export function Layout({ children }: LayoutProps) {
     superadmin: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/users", icon: Users, label: "User Management" },
-      { href: "/enrollments", icon: UserPlus, label: "Enrollments" },
+      {
+        type: "expandable",
+        menuId: "enrollments",
+        icon: UserPlus,
+        label: "Enrollments",
+        defaultHref: "/enrollments/subjects",
+        subItems: [
+          { href: "/enrollments/subjects", icon: BookOpen, label: "Subjects" },
+          { href: "/enrollments/sections", icon: Layers, label: "Sections" },
+        ]
+      },
       { href: "/settings", icon: Settings, label: "System Settings" },
     ]
   };

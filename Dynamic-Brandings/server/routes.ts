@@ -511,6 +511,79 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // === Sections ===
+  app.get(api.sections.list.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const allSections = await storage.getAllSections();
+    res.json(allSections);
+  });
+
+  app.post(api.sections.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const sectionData = api.sections.create.input.parse(req.body);
+      const section = await storage.createSection(sectionData);
+      res.status(201).json(section);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to create section" });
+    }
+  });
+
+  app.put('/api/sections/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateSection(id, req.body);
+      if (!updated) return res.status(404).json({ message: "Section not found" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to update section" });
+    }
+  });
+
+  app.delete('/api/sections/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteSection(id);
+      res.sendStatus(204);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to delete section" });
+    }
+  });
+
+  app.get(api.sections.students.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const sectionId = parseInt(req.params.id);
+    const students = await storage.getSectionStudents(sectionId);
+    const safeStudents = students.map(({ password, ...rest }) => rest);
+    res.json(safeStudents);
+  });
+
+  app.post(api.sections.enroll.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { studentId } = req.body;
+      const enrollment = await storage.enrollStudentInSection(studentId, sectionId);
+      res.json(enrollment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to enroll student" });
+    }
+  });
+
+  app.delete('/api/sections/:id/unenroll/:studentId', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const sectionId = parseInt(req.params.id);
+      const studentId = parseInt(req.params.studentId);
+      await storage.unenrollStudentFromSection(studentId, sectionId);
+      res.sendStatus(204);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to unenroll student" });
+    }
+  });
+
   // Seed Data
   await seedDatabase();
 

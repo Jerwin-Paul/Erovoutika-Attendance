@@ -67,6 +67,21 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const sections = pgTable("sections", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sectionEnrollments = pgTable("section_enrollments", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => users.id).notNull(),
+  sectionId: integer("section_id").references(() => sections.id).notNull(),
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+});
+
 export const systemSettings = pgTable("system_settings", {
   id: serial("id").primaryKey(),
   key: text("key").notNull().unique(),
@@ -79,6 +94,7 @@ export const systemSettings = pgTable("system_settings", {
 export const usersRelations = relations(users, ({ many }) => ({
   subjectsTaught: many(subjects, { relationName: "teacherSubjects" }),
   enrollments: many(enrollments),
+  sectionEnrollments: many(sectionEnrollments),
   attendanceRecords: many(attendance),
 }));
 
@@ -92,6 +108,21 @@ export const subjectsRelations = relations(subjects, ({ one, many }) => ({
   attendanceRecords: many(attendance),
   qrCodes: many(qrCodes),
   schedules: many(schedules),
+}));
+
+export const sectionsRelations = relations(sections, ({ many }) => ({
+  sectionEnrollments: many(sectionEnrollments),
+}));
+
+export const sectionEnrollmentsRelations = relations(sectionEnrollments, ({ one }) => ({
+  student: one(users, {
+    fields: [sectionEnrollments.studentId],
+    references: [users.id],
+  }),
+  section: one(sections, {
+    fields: [sectionEnrollments.sectionId],
+    references: [sections.id],
+  }),
 }));
 
 export const schedulesRelations = relations(schedules, ({ one }) => ({
@@ -131,6 +162,8 @@ export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id:
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, timeIn: true });
 export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({ id: true, createdAt: true });
 export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true });
+export const insertSectionSchema = createInsertSchema(sections).omit({ id: true, createdAt: true });
+export const insertSectionEnrollmentSchema = createInsertSchema(sectionEnrollments).omit({ id: true, enrolledAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -141,6 +174,8 @@ export type Enrollment = typeof enrollments.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
 export type QrCode = typeof qrCodes.$inferSelect;
 export type Schedule = typeof schedules.$inferSelect;
+export type Section = typeof sections.$inferSelect;
+export type SectionEnrollment = typeof sectionEnrollments.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -149,6 +184,8 @@ export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type InsertQrCode = z.infer<typeof insertQrCodeSchema>;
 export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
+export type InsertSection = z.infer<typeof insertSectionSchema>;
+export type InsertSectionEnrollment = z.infer<typeof insertSectionEnrollmentSchema>;
 
 // Request types
 export type LoginRequest = {

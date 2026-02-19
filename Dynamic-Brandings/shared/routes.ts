@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertSubjectSchema, insertAttendanceSchema, insertQrCodeSchema, insertScheduleSchema, users, subjects, attendance, enrollments, schedules } from './schema';
+import { insertUserSchema, insertSubjectSchema, insertAttendanceSchema, insertQrCodeSchema, insertScheduleSchema, insertSectionSchema, users, subjects, attendance, enrollments, schedules, sections, sectionEnrollments } from './schema';
 
 // ============================================
 // SHARED ERROR SCHEMAS
@@ -197,6 +197,63 @@ export const api = {
     delete: {
       method: 'DELETE' as const,
       path: '/api/schedules/:id',
+      responses: {
+        204: z.void(),
+      },
+    },
+  },
+  sections: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/sections',
+      responses: {
+        200: z.array(z.custom<typeof sections.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/sections',
+      input: insertSectionSchema,
+      responses: {
+        201: z.custom<typeof sections.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/sections/:id',
+      input: insertSectionSchema.partial(),
+      responses: {
+        200: z.custom<typeof sections.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/sections/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+    students: {
+      method: 'GET' as const,
+      path: '/api/sections/:id/students',
+      responses: {
+        200: z.array(z.custom<typeof users.$inferSelect>()),
+      },
+    },
+    enroll: {
+      method: 'POST' as const,
+      path: '/api/sections/:id/enroll',
+      input: z.object({ studentId: z.number() }),
+      responses: {
+        200: z.custom<typeof sectionEnrollments.$inferSelect>(),
+      },
+    },
+    unenroll: {
+      method: 'DELETE' as const,
+      path: '/api/sections/:id/unenroll/:studentId',
       responses: {
         204: z.void(),
       },

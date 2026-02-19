@@ -1,12 +1,14 @@
 import { db } from "./db";
 import { 
-  users, subjects, enrollments, attendance, qrCodes, schedules,
+  users, subjects, enrollments, attendance, qrCodes, schedules, sections, sectionEnrollments,
   type User, type InsertUser, 
   type Subject, type InsertSubject,
   type Attendance, type InsertAttendance,
   type Enrollment, type InsertEnrollment,
   type QrCode, type InsertQrCode,
-  type Schedule, type InsertSchedule
+  type Schedule, type InsertSchedule,
+  type Section, type InsertSection,
+  type SectionEnrollment, type InsertSectionEnrollment
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -52,6 +54,16 @@ export interface IStorage {
   getSchedulesBySubject(subjectId: number): Promise<Schedule[]>;
   getSchedulesByTeacher(teacherId: number): Promise<(Schedule & { subjectName: string; subjectCode: string })[]>;
   deleteSchedule(id: number): Promise<void>;
+
+  // Sections
+  createSection(section: InsertSection): Promise<Section>;
+  getSection(id: number): Promise<Section | undefined>;
+  getAllSections(): Promise<Section[]>;
+  updateSection(id: number, updates: Partial<InsertSection>): Promise<Section | undefined>;
+  deleteSection(id: number): Promise<void>;
+  enrollStudentInSection(studentId: number, sectionId: number): Promise<SectionEnrollment>;
+  unenrollStudentFromSection(studentId: number, sectionId: number): Promise<void>;
+  getSectionStudents(sectionId: number): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -303,6 +315,52 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSchedule(id: number): Promise<void> {
     await db.delete(schedules).where(eq(schedules.id, id));
+  }
+
+  // === Sections ===
+  async createSection(section: InsertSection): Promise<Section> {
+    const [newSection] = await db.insert(sections).values(section).returning();
+    return newSection;
+  }
+
+  async getSection(id: number): Promise<Section | undefined> {
+    const [section] = await db.select().from(sections).where(eq(sections.id, id));
+    return section;
+  }
+
+  async getAllSections(): Promise<Section[]> {
+    return db.select().from(sections);
+  }
+
+  async updateSection(id: number, updates: Partial<InsertSection>): Promise<Section | undefined> {
+    const [updated] = await db.update(sections).set(updates).where(eq(sections.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSection(id: number): Promise<void> {
+    await db.delete(sectionEnrollments).where(eq(sectionEnrollments.sectionId, id));
+    await db.delete(sections).where(eq(sections.id, id));
+  }
+
+  async enrollStudentInSection(studentId: number, sectionId: number): Promise<SectionEnrollment> {
+    const [enrollment] = await db.insert(sectionEnrollments).values({ studentId, sectionId }).returning();
+    return enrollment;
+  }
+
+  async unenrollStudentFromSection(studentId: number, sectionId: number): Promise<void> {
+    await db.delete(sectionEnrollments)
+      .where(and(eq(sectionEnrollments.studentId, studentId), eq(sectionEnrollments.sectionId, sectionId)));
+  }
+
+  async getSectionStudents(sectionId: number): Promise<User[]> {
+    const result = await db.select({
+      user: users
+    })
+    .from(sectionEnrollments)
+    .innerJoin(users, eq(sectionEnrollments.studentId, users.id))
+    .where(eq(sectionEnrollments.sectionId, sectionId));
+    
+    return result.map(r => r.user);
   }
 }
 
