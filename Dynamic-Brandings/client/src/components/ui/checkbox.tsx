@@ -17,7 +17,8 @@ const Checkbox = React.forwardRef<
     {...props}
   >
     <CheckboxPrimitive.Indicator
-      className={cn("flex items-center justify-center text-current")}
+      forceMount
+      className={cn("flex items-center justify-center text-current data-[state=unchecked]:opacity-0")}
     >
       {props.checked === "indeterminate" ? (
         <Minus className="h-4 w-4" />
