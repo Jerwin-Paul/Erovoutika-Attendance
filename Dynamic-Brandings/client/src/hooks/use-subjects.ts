@@ -147,6 +147,52 @@ export function useCreateSubject() {
   });
 }
 
+export function useUpdateSubject() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: number; name?: string; code?: string; description?: string; teacherId?: number | null }) => {
+      const dbData: Record<string, any> = {};
+      if (data.name !== undefined) dbData.name = data.name;
+      if (data.code !== undefined) dbData.code = data.code;
+      if (data.description !== undefined) dbData.description = data.description;
+      if (data.teacherId !== undefined) dbData.teacher_id = data.teacherId;
+
+      const { data: result, error } = await supabase
+        .from("subjects")
+        .update(dbData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw new Error("Failed to update subject");
+      return mapDbRowToSubject(result);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      toast({ title: "Subject Updated", description: "Subject has been updated successfully." });
+    },
+  });
+}
+
+export function useDeleteSubject() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await supabase.from("enrollments").delete().eq("subject_id", id);
+      const { error } = await supabase.from("subjects").delete().eq("id", id);
+      if (error) throw new Error("Failed to delete subject");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      toast({ title: "Subject Deleted", description: "Subject and its enrollments have been removed." });
+    },
+  });
+}
+
 export function useEnrollStudent() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

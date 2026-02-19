@@ -3,6 +3,7 @@ import {
   useSections,
   useSectionStudents,
   useCreateSection,
+  useUpdateSection,
   useDeleteSection,
   useEnrollStudentInSection,
   useUnenrollStudentFromSection,
@@ -49,7 +50,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UserPlus, UserMinus, Search, Users, Layers, Loader2, Plus, Trash2 } from "lucide-react";
+import { UserPlus, UserMinus, Search, Users, Layers, Loader2, Plus, Trash2, Pencil } from "lucide-react";
 
 export default function SectionManagement() {
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
@@ -58,12 +59,17 @@ export default function SectionManagement() {
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionCode, setNewSectionCode] = useState("");
   const [newSectionDescription, setNewSectionDescription] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editSectionName, setEditSectionName] = useState("");
+  const [editSectionCode, setEditSectionCode] = useState("");
+  const [editSectionDescription, setEditSectionDescription] = useState("");
 
   const { data: sections = [], isLoading: sectionsLoading } = useSections();
   const { data: enrolledStudents = [], isLoading: enrolledLoading } = useSectionStudents(selectedSectionId || 0);
   const { data: allStudents = [], isLoading: studentsLoading } = useUsers("student");
 
   const createSection = useCreateSection();
+  const updateSection = useUpdateSection();
   const deleteSection = useDeleteSection();
   const enrollStudent = useEnrollStudentInSection();
   const unenrollStudent = useUnenrollStudentFromSection();
@@ -116,133 +122,219 @@ export default function SectionManagement() {
     );
   };
 
-  const handleDeleteSection = (sectionId: number) => {
-    deleteSection.mutate(sectionId, {
+  const handleDeleteSection = () => {
+    if (!selectedSectionId) return;
+    deleteSection.mutate(selectedSectionId, {
       onSuccess: () => {
-        if (selectedSectionId === sectionId) {
-          setSelectedSectionId(null);
-        }
+        setSelectedSectionId(null);
       },
     });
   };
 
   const selectedSection = sections.find((s) => s.id === selectedSectionId);
 
+  const openEditDialog = () => {
+    if (!selectedSection) return;
+    setEditSectionName(selectedSection.name);
+    setEditSectionCode(selectedSection.code);
+    setEditSectionDescription(selectedSection.description || "");
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateSection = () => {
+    if (!selectedSectionId || !editSectionName.trim() || !editSectionCode.trim()) return;
+    updateSection.mutate(
+      {
+        id: selectedSectionId,
+        name: editSectionName.trim(),
+        code: editSectionCode.trim(),
+        description: editSectionDescription.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setEditDialogOpen(false);
+        },
+      }
+    );
+  };
+
   return (
     <div className="space-y-6 overflow-x-hidden">
       {/* Section Selection */}
       <Card className="border-2 border-primary/20">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Layers className="h-5 w-5" />
-              Select Section
-            </span>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-4 w-4" />
-                  New Section
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Section</DialogTitle>
-                  <DialogDescription>Add a new section to enroll students into.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="section-name">Section Name</Label>
-                    <Input
-                      id="section-name"
-                      placeholder="e.g. Section A"
-                      value={newSectionName}
-                      onChange={(e) => setNewSectionName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="section-code">Section Code</Label>
-                    <Input
-                      id="section-code"
-                      placeholder="e.g. SEC-A"
-                      value={newSectionCode}
-                      onChange={(e) => setNewSectionCode(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="section-desc">Description (optional)</Label>
-                    <Textarea
-                      id="section-desc"
-                      placeholder="Description of this section..."
-                      value={newSectionDescription}
-                      onChange={(e) => setNewSectionDescription(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCreateSection}
-                    disabled={!newSectionName.trim() || !newSectionCode.trim() || createSection.isPending}
-                  >
-                    {createSection.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Create
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="h-5 w-5" />
+            Select Section
           </CardTitle>
-          <CardDescription>Choose a section to manage student enrollments</CardDescription>
+          <CardDescription>
+            Choose a section to manage student enrollments
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Select
-              value={selectedSectionId?.toString() || ""}
-              onValueChange={(value) => setSelectedSectionId(Number(value))}
-              disabled={sectionsLoading}
-            >
-              <SelectTrigger className="w-full md:w-[400px]">
-                <SelectValue placeholder="Select a section..." />
-              </SelectTrigger>
-              <SelectContent>
-                {sections.map((section) => (
-                  <SelectItem key={section.id} value={section.id.toString()}>
-                    {section.code} - {section.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {selectedSectionId && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0">
-                    <Trash2 className="h-4 w-4" />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* New Section */}
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-1">
+                    <Plus className="h-4 w-4" />
+                    New Section
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Section</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete <strong>{selectedSection?.code} - {selectedSection?.name}</strong>?
-                      This will remove all student enrollments in this section.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDeleteSection(selectedSectionId)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Section</DialogTitle>
+                    <DialogDescription>Add a new section to enroll students into.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="section-name">Section Name</Label>
+                      <Input
+                        id="section-name"
+                        placeholder="e.g. Section A"
+                        value={newSectionName}
+                        onChange={(e) => setNewSectionName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="section-code">Section Code</Label>
+                      <Input
+                        id="section-code"
+                        placeholder="e.g. SEC-A"
+                        value={newSectionCode}
+                        onChange={(e) => setNewSectionCode(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="section-desc">Description (optional)</Label>
+                      <Textarea
+                        id="section-desc"
+                        placeholder="Description of this section..."
+                        value={newSectionDescription}
+                        onChange={(e) => setNewSectionDescription(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateSection}
+                      disabled={!newSectionName.trim() || !newSectionCode.trim() || createSection.isPending}
                     >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+                      {createSection.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Create
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit & Delete Section */}
+              {selectedSectionId && (
+                <>
+                  <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1" onClick={openEditDialog}>
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Section</DialogTitle>
+                        <DialogDescription>Update the section details.</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-section-name">Section Name</Label>
+                          <Input
+                            id="edit-section-name"
+                            placeholder="e.g. Section A"
+                            value={editSectionName}
+                            onChange={(e) => setEditSectionName(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-section-code">Section Code</Label>
+                          <Input
+                            id="edit-section-code"
+                            placeholder="e.g. SEC-A"
+                            value={editSectionCode}
+                            onChange={(e) => setEditSectionCode(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-section-desc">Description (Optional)</Label>
+                          <Textarea
+                            id="edit-section-desc"
+                            placeholder="Description of this section..."
+                            value={editSectionDescription}
+                            onChange={(e) => setEditSectionDescription(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                        <Button
+                          onClick={handleUpdateSection}
+                          disabled={!editSectionName.trim() || !editSectionCode.trim() || updateSection.isPending}
+                        >
+                          {updateSection.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          Save Changes
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Delete Section */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Section</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete <strong>{selectedSection?.code} - {selectedSection?.name}</strong>?
+                          This will remove all student enrollments in this section. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteSection}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {deleteSection.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          Delete Section
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
           </div>
+
+          <Select
+            value={selectedSectionId?.toString() || ""}
+            onValueChange={(value) => setSelectedSectionId(Number(value))}
+            disabled={sectionsLoading}
+          >
+            <SelectTrigger className="w-full md:w-[400px]">
+              <SelectValue placeholder="Select a section..." />
+            </SelectTrigger>
+            <SelectContent>
+              {sections.map((section) => (
+                <SelectItem key={section.id} value={section.id.toString()}>
+                  {section.code} - {section.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
